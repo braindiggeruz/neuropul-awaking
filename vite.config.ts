@@ -27,12 +27,12 @@ export default defineConfig(({ mode }) => {
       'import.meta.env.DEFAULT_LANGUAGE': JSON.stringify(env.DEFAULT_LANGUAGE || 'ru'),
     },
     build: {
-      sourcemap: false, // Disable source maps for production
-      minify: 'terser', // Use terser for better minification
+      sourcemap: mode !== 'production',
+      minify: 'terser',
       terserOptions: {
         compress: {
-          drop_console: true, // Remove console.log in production
-          drop_debugger: true // Remove debugger statements
+          drop_console: mode === 'production',
+          drop_debugger: mode === 'production'
         }
       },
       rollupOptions: {

@@ -25,6 +25,7 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
   const languageRef = useRef(language);
   const timeoutRefs = useRef<NodeJS.Timeout[]>([]);
   const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const isMountedRef = useRef(true);
 
   // Update refs when state changes
   useEffect(() => {
@@ -38,12 +39,21 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
       const detectedLanguage = getUserLanguage();
       setLanguage(detectedLanguage);
     } catch (error) {
-      console.error('Error in language detection:', error);
+      if (import.meta.env.MODE !== 'production') {
+        console.error('Error in language detection:', error);
+      }
       logError(error, {
         component: 'TraeAwakens',
         action: 'languageDetection'
       });
     }
+    
+    // Set mounted flag
+    isMountedRef.current = true;
+    
+    return () => {
+      isMountedRef.current = false;
+    };
   }, []);
 
   // Trae's response to those who want to awaken
@@ -63,7 +73,9 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
       // Try to get user name from localStorage
       const savedName = localStorage.getItem('neuropul_user_name');
       if (savedName) {
-        console.log(`User name loaded: ${savedName}`);
+        if (import.meta.env.MODE !== 'production') {
+          console.log(`User name loaded: ${savedName}`);
+        }
       }
       
       // Load user progress
@@ -84,39 +96,41 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
           
           // Show continue button after message is fully typed
           const continueTimeout = setTimeout(() => {
-            setShowOptions(true);
-            
-            // Award XP for reaching this step
-            const currentXp = userProgress?.xp || 0;
-            const newXp = currentXp + 10;
-            
-            // Update user progress
-            if (userProgress) {
-              updateUserProgress({
-                xp: newXp,
-                questStep: 1,
-                lastActive: new Date().toISOString()
-              });
-            } else {
-              // Create initial progress
-              saveUserProgress({
-                name: savedName || '',
-                archetype: null,
-                avatarUrl: '',
-                xp: newXp,
-                level: 1,
-                prophecy: '',
-                awakened: false,
-                createdAt: new Date().toISOString(),
-                lastActive: new Date().toISOString(),
-                questStep: 1,
-                userPath: 'awakening'
-              });
+            if (isMountedRef.current) {
+              setShowOptions(true);
+              
+              // Award XP for reaching this step
+              const currentXp = userProgress?.xp || 0;
+              const newXp = currentXp + 10;
+              
+              // Update user progress
+              if (userProgress) {
+                updateUserProgress({
+                  xp: newXp,
+                  questStep: 1,
+                  lastActive: new Date().toISOString()
+                });
+              } else {
+                // Create initial progress
+                saveUserProgress({
+                  name: savedName || '',
+                  archetype: null,
+                  avatarUrl: '',
+                  xp: newXp,
+                  level: 1,
+                  prophecy: '',
+                  awakened: false,
+                  createdAt: new Date().toISOString(),
+                  lastActive: new Date().toISOString(),
+                  questStep: 1,
+                  userPath: 'awakening'
+                });
+              }
+              
+              // Play XP sound
+              playSound('xp', true);
+              vibrate([50, 30, 50], true);
             }
-            
-            // Play XP sound
-            playSound('xp', true);
-            vibrate([50, 30, 50], true);
           }, 500);
           
           timeoutRefs.current.push(continueTimeout);
@@ -138,7 +152,9 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
         cleanupAudio();
       };
     } catch (error) {
-      console.error('Error in typing effect:', error);
+      if (import.meta.env.MODE !== 'production') {
+        console.error('Error in typing effect:', error);
+      }
       logError(error, {
         component: 'TraeAwakens',
         action: 'typingEffect'
@@ -157,7 +173,6 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
   const handlePathSelect = (path: 'lost' | 'awakening' | 'ready') => {
     try {
       if (isNavigatingRef.current) {
-        console.log('Navigation already in progress, ignoring');
         return;
       }
       
@@ -193,20 +208,26 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
       
       // Call onPathSelect with a small delay to ensure state is saved
       const navigationTimeout = setTimeout(() => {
-        onPathSelect(path);
-        
-        // Reset navigation state after a delay in case the navigation fails
-        const resetTimeout = setTimeout(() => {
-          setIsNavigating(false);
-          isNavigatingRef.current = false;
-        }, 1000);
-        
-        timeoutRefs.current.push(resetTimeout);
+        if (isMountedRef.current) {
+          onPathSelect(path);
+          
+          // Reset navigation state after a delay in case the navigation fails
+          const resetTimeout = setTimeout(() => {
+            if (isMountedRef.current) {
+              setIsNavigating(false);
+              isNavigatingRef.current = false;
+            }
+          }, 1000);
+          
+          timeoutRefs.current.push(resetTimeout);
+        }
       }, 300); // Increased delay to ensure state is saved before navigation
       
       timeoutRefs.current.push(navigationTimeout);
     } catch (error) {
-      console.error('Error in handlePathSelect:', error);
+      if (import.meta.env.MODE !== 'production') {
+        console.error('Error in handlePathSelect:', error);
+      }
       logError(error, {
         component: 'TraeAwakens',
         action: 'handlePathSelect'
@@ -276,20 +297,26 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
         
         // Call onPathSelect with a small delay
         const navigationTimeout = setTimeout(() => {
-          onPathSelect(detectedPath);
-          
-          // Reset navigation state after a delay in case the navigation fails
-          const resetTimeout = setTimeout(() => {
-            setIsNavigating(false);
-            isNavigatingRef.current = false;
-          }, 1000);
-          
-          timeoutRefs.current.push(resetTimeout);
+          if (isMountedRef.current) {
+            onPathSelect(detectedPath);
+            
+            // Reset navigation state after a delay in case the navigation fails
+            const resetTimeout = setTimeout(() => {
+              if (isMountedRef.current) {
+                setIsNavigating(false);
+                isNavigatingRef.current = false;
+              }
+            }, 1000);
+            
+            timeoutRefs.current.push(resetTimeout);
+          }
         }, 300); // Increased delay to ensure state is saved before navigation
         
         timeoutRefs.current.push(navigationTimeout);
       } catch (error) {
-        console.error('Error in handleCustomInput:', error);
+        if (import.meta.env.MODE !== 'production') {
+          console.error('Error in handleCustomInput:', error);
+        }
         logError(error, {
           component: 'TraeAwakens',
           action: 'handleCustomInput',
@@ -329,7 +356,9 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
           
           // Show continue button after message is fully typed
           const continueTimeout = setTimeout(() => {
-            setShowOptions(true);
+            if (isMountedRef.current) {
+              setShowOptions(true);
+            }
           }, 500);
           
           timeoutRefs.current.push(continueTimeout);
@@ -338,7 +367,9 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
       
       timeoutRefs.current.push(typingInterval);
     } catch (error) {
-      console.error('Error changing language:', error);
+      if (import.meta.env.MODE !== 'production') {
+        console.error('Error changing language:', error);
+      }
       logError(error, {
         component: 'TraeAwakens',
         action: 'handleLanguageChange'
@@ -365,36 +396,14 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
       {/* Background cyberpunk elements with enhanced effects */}
       <div className="absolute inset-0 overflow-hidden">
         {/* Cyberpunk grid */}
-        <div className="absolute top-0 left-0 w-full h-full bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxkZWZzPjxwYXR0ZXJuIGlkPSJncmlkIiB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHBhdHRlcm5Vbml0cz0idXNlclNwYWNlT25Vc2UiPjxwYXRoIGQ9Ik0gNDAgMCBMIDAgMCAwIDQwIiBmaWxsPSJub25lIiBzdHJva2U9IiM4YjVjZjYiIHN0cm9rZS13aWR0aD0iMC41Ii8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIiBvcGFjaXR5PSIwLjA1Ii8+PC9zdmc+')]"></div>
+        <div className="absolute top-0 left-0 w-full h-full cyberpunk-grid"></div>
         
         {/* Animated glowing orbs */}
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-purple-500 rounded-full filter blur-[100px] opacity-20 animate-pulse"></div>
         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-500 rounded-full filter blur-[100px] opacity-20 animate-pulse" style={{ animationDelay: '1s' }}></div>
         
         {/* Digital rain effect (matrix-like) */}
-        <div className="absolute inset-0 opacity-10 pointer-events-none overflow-hidden">
-          <div className="absolute top-0 left-0 w-full h-full">
-            {Array.from({ length: 10 }).map((_, i) => (
-              <div 
-                key={i}
-                className="absolute text-cyan-500 text-xs font-mono"
-                style={{
-                  left: `${Math.random() * 100}%`,
-                  top: 0,
-                  opacity: 0.5 + Math.random() * 0.5,
-                  animation: `digitalRain ${5 + Math.random() * 10}s linear infinite`,
-                  animationDelay: `${Math.random() * 5}s`
-                }}
-              >
-                {Array.from({ length: 20 }).map((_, j) => (
-                  <div key={j} className="my-1">
-                    {Math.random() > 0.5 ? '1' : '0'}
-                  </div>
-                ))}
-              </div>
-            ))}
-          </div>
-        </div>
+        <div className="absolute inset-0 opacity-10 pointer-events-none overflow-hidden digital-rain"></div>
         
         {/* Scanlines effect */}
         <div className="absolute inset-0 bg-scanline opacity-5 pointer-events-none"></div>
@@ -470,6 +479,7 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
                       aria-label={language === 'ru' ? 'Я потерян' : 'Men yo\'qolganman'}
                       disabled={isNavigating}
                       id="lost-soul-button"
+                      name="lost-soul-button"
                       data-testid="lost-soul-button"
                     >
                       {/* Hover effect */}
@@ -500,6 +510,7 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
                       aria-label={language === 'ru' ? 'Хочу пробудиться' : 'Uyg\'onishni xohlayman'}
                       disabled={isNavigating}
                       id="awakening-button"
+                      name="awakening-button"
                       data-testid="awakening-button"
                     >
                       {/* Animated highlight effect */}
@@ -531,6 +542,7 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
                       aria-label={language === 'ru' ? 'Я уже в теме' : 'Men allaqachon bilaman'}
                       disabled={isNavigating}
                       id="ready-button"
+                      name="ready-button"
                       data-testid="ready-button"
                     >
                       {/* Hover effect */}
@@ -565,6 +577,8 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
                           className="text-purple-400 hover:text-purple-300 text-sm transition-colors flex items-center mx-auto focus-ring"
                           aria-label={language === 'ru' ? 'Описать свой опыт своими словами' : 'Tajribangizni o\'z so\'zlaringiz bilan tasvirlang'}
                           disabled={isNavigating}
+                          id="custom-input-button"
+                          name="custom-input-button"
                         >
                           <span>
                             {language === 'ru' 
@@ -585,6 +599,8 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
                             onKeyPress={(e) => e.key === 'Enter' && handleCustomInput()}
                             aria-label={language === 'ru' ? 'Ваш опыт с AI' : 'AI bilan tajribangiz'}
                             disabled={isNavigating}
+                            id="custom-input"
+                            name="custom-input"
                           />
                           <button
                             onClick={handleCustomInput}
@@ -592,6 +608,8 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
                             className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors focus-ring"
                             aria-label={language === 'ru' ? 'Отправить' : 'Yuborish'}
                             disabled={isNavigating}
+                            id="submit-custom-input"
+                            name="submit-custom-input"
                           >
                             {language === 'ru' ? 'Отправить' : 'Yuborish'}
                           </button>

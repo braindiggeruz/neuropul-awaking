@@ -7,6 +7,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { saveUserProgress, loadUserProgress, updateUserProgress } from '../utils/progressUtils';
 import { logError } from '../lib/utils/errorLogger';
 import { cleanupAudio } from '../utils/audioUtils';
+import { useNavigate } from 'react-router-dom';
 
 type Screen = 'intro' | 'lost' | 'awakening' | 'ready' | 'portal';
 
@@ -15,6 +16,7 @@ const TraeAwakensPage: React.FC = () => {
   const [userPath, setUserPath] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<string>('');
   const [viewCount, setViewCount] = useState(0);
+  const navigate = useNavigate();
   
   // Refs for cleanup and navigation control
   const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -90,7 +92,9 @@ const TraeAwakensPage: React.FC = () => {
         });
       }
     } catch (error) {
-      console.error('Error initializing session:', error);
+      if (import.meta.env.MODE !== 'production') {
+        console.error('Error initializing session:', error);
+      }
       logError(error, {
         component: 'TraeAwakensPage',
         action: 'initialize'
@@ -111,6 +115,7 @@ const TraeAwakensPage: React.FC = () => {
       
       // Clear all timeouts
       timeoutRefs.current.forEach(timeout => clearTimeout(timeout));
+      timeoutRefs.current = [];
       
       // Clean up audio
       cleanupAudio();
@@ -156,7 +161,9 @@ const TraeAwakensPage: React.FC = () => {
       
       timeoutRefs.current.push(resetTimeout);
     } catch (error) {
-      console.error('Error in handlePathSelect:', error);
+      if (import.meta.env.MODE !== 'production') {
+        console.error('Error in handlePathSelect:', error);
+      }
       logError(error, {
         component: 'TraeAwakensPage',
         action: 'handlePathSelect'
@@ -197,7 +204,9 @@ const TraeAwakensPage: React.FC = () => {
       
       timeoutRefs.current.push(resetTimeout);
     } catch (error) {
-      console.error('Error in handleBack:', error);
+      if (import.meta.env.MODE !== 'production') {
+        console.error('Error in handleBack:', error);
+      }
       logError(error, {
         component: 'TraeAwakensPage',
         action: 'handleBack'
@@ -240,27 +249,28 @@ const TraeAwakensPage: React.FC = () => {
         localStorage.setItem('neuropul_show_cta', 'true');
       }
       
-      // In a real implementation, you would navigate to the awakening portal or dashboard
-      // For now, we'll just redirect to the home page after a delay
+      // Navigate to home or premium page after a delay
       const redirectTimeout = setTimeout(() => {
         if (isMountedRef.current) {
           // Check if we should show CTA
           if (localStorage.getItem('neuropul_show_cta') === 'true' && localStorage.getItem('neuropul_is_paid') !== 'true') {
-            // Redirect to CTA page
-            window.location.href = '/premium';
+            // Navigate to premium page
+            navigate('/premium');
           } else {
-            // Redirect to main app
-            window.location.href = '/';
+            // Navigate to home page
+            navigate('/');
           }
+          
+          // Reset navigation lock
+          isNavigatingRef.current = false;
         }
-        
-        // Reset navigation lock
-        isNavigatingRef.current = false;
       }, 1000);
       
       timeoutRefs.current.push(redirectTimeout);
     } catch (error) {
-      console.error('Error in handleContinueToPortal:', error);
+      if (import.meta.env.MODE !== 'production') {
+        console.error('Error in handleContinueToPortal:', error);
+      }
       logError(error, {
         component: 'TraeAwakensPage',
         action: 'handleContinueToPortal'
@@ -295,7 +305,9 @@ const TraeAwakensPage: React.FC = () => {
             // Generate new session
             const newSessionId = `session_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
             localStorage.setItem('neuropul_session_id', newSessionId);
-            setSessionId(newSessionId);
+            if (isMountedRef.current) {
+              setSessionId(newSessionId);
+            }
           }
         }
       }
@@ -310,9 +322,10 @@ const TraeAwakensPage: React.FC = () => {
     return () => {
       if (inactivityTimerRef.current) {
         clearTimeout(inactivityTimerRef.current);
+        inactivityTimerRef.current = null;
       }
     };
-  }, [currentScreen]);
+  }, [currentScreen, navigate]);
 
   return (
     <div className="relative min-h-screen overflow-hidden">

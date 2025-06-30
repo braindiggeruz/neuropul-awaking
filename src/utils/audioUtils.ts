@@ -163,7 +163,9 @@ export const vibrate = (pattern: number[], enabled: boolean = true): void => {
     if (navigator.vibrate) {
       navigator.vibrate(pattern);
     } else {
-      console.log('Vibration API not supported in this browser');
+      if (import.meta.env.MODE !== 'production') {
+        console.log('Vibration API not supported in this browser');
+      }
     }
   } catch (error) {
     // Silently fail in production
@@ -218,11 +220,15 @@ export const cleanupAudio = (): void => {
       audioContext.close().then(() => {
         audioContext = null;
       }).catch(err => {
-        console.error('Error closing audio context:', err);
+        if (import.meta.env.MODE !== 'production') {
+          console.error('Error closing audio context:', err);
+        }
       });
     }
   } catch (error) {
-    console.error('Error cleaning up audio resources:', error);
+    if (import.meta.env.MODE !== 'production') {
+      console.error('Error cleaning up audio resources:', error);
+    }
     logError(error, {
       component: 'audioUtils',
       action: 'cleanupAudio'

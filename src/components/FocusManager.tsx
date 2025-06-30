@@ -30,7 +30,9 @@ const FocusManager: React.FC<FocusManagerProps> = ({ children }) => {
         window.removeEventListener('beforeunload', saveFocus);
       };
     } catch (error) {
-      console.error('Error in focus management:', error);
+      if (import.meta.env.MODE !== 'production') {
+        console.error('Error in focus management:', error);
+      }
       logError(error, {
         component: 'FocusManager',
         action: 'saveFocus'
@@ -42,7 +44,7 @@ const FocusManager: React.FC<FocusManagerProps> = ({ children }) => {
   useEffect(() => {
     try {
       // If we have a container and a previously focused element
-      if (containerRef.current && lastFocusedElement.current) {
+      if (containerRef.current && lastFocusedElement.current && isMountedRef.current) {
         // Check if the element is still in the document
         if (document.body.contains(lastFocusedElement.current)) {
           lastFocusedElement.current.focus();
@@ -58,12 +60,18 @@ const FocusManager: React.FC<FocusManagerProps> = ({ children }) => {
         }
       }
     } catch (error) {
-      console.error('Error restoring focus:', error);
+      if (import.meta.env.MODE !== 'production') {
+        console.error('Error restoring focus:', error);
+      }
       logError(error, {
         component: 'FocusManager',
         action: 'restoreFocus'
       });
     }
+    
+    return () => {
+      isMountedRef.current = false;
+    };
   }, []);
 
   return (

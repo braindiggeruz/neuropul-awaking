@@ -33,7 +33,9 @@ export const getUserLanguage = (): Language => {
     localStorage.setItem('neuropul_language', 'ru');
     return 'ru';
   } catch (error) {
-    console.error('Error getting user language:', error);
+    if (import.meta.env.MODE !== 'production') {
+      console.error('Error getting user language:', error);
+    }
     return 'ru';
   }
 };
@@ -54,7 +56,9 @@ export const setUserLanguage = (language: Language): void => {
     // Update HTML lang attribute
     document.documentElement.lang = language;
   } catch (error) {
-    console.error('Error setting user language:', error);
+    if (import.meta.env.MODE !== 'production') {
+      console.error('Error setting user language:', error);
+    }
   }
 };
 
@@ -87,7 +91,9 @@ export const translate = (key: string, language?: Language): string => {
     
     return key;
   } catch (error) {
-    console.error('Translation error:', error);
+    if (import.meta.env.MODE !== 'production') {
+      console.error('Translation error:', error);
+    }
     return key;
   }
 };
@@ -99,7 +105,9 @@ export const formatString = (str: string, variables: Record<string, string | num
       variables[key] !== undefined ? String(variables[key]) : `{${key}}`
     );
   } catch (error) {
-    console.error('String formatting error:', error);
+    if (import.meta.env.MODE !== 'production') {
+      console.error('String formatting error:', error);
+    }
     return str;
   }
 };
@@ -117,7 +125,9 @@ export const hasTranslation = (key: string, language: Language): boolean => {
     
     return typeof value === 'string';
   } catch (error) {
-    console.error('Translation check error:', error);
+    if (import.meta.env.MODE !== 'production') {
+      console.error('Translation check error:', error);
+    }
     return false;
   }
 };

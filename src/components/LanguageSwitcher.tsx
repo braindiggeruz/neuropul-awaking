@@ -76,6 +76,8 @@ const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({
       aria-label={language === 'ru' ? 'Switch to Uzbek' : 'Переключиться на русский'}
       role="button"
       tabIndex={0}
+      id="language-switcher"
+      name="language-switcher"
     >
       {language === 'ru' ? '🇺🇿 O\'zbekcha' : '🇷🇺 Русский'}
     </motion.button>

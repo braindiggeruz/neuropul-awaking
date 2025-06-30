@@ -46,6 +46,12 @@ export default defineConfig(({ mode }) => {
           },
         },
       },
+      chunkSizeWarningLimit: 1000,
+      emptyOutDir: true,
     },
+    css: {
+      devSourcemap: false,
+    },
+    cacheDir: '.vite_cache',
   };
 });

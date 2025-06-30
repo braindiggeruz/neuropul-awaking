@@ -31,6 +31,25 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
     languageRef.current = language;
   }, [isNavigating, language]);
 
+  // Check for existing path in localStorage
+  useEffect(() => {
+    const savedPath = localStorage.getItem('neuropul_user_path');
+    if (savedPath && (savedPath === 'lost' || savedPath === 'awakening' || savedPath === 'ready')) {
+      // If user already selected a path, continue from there
+      console.log('Found saved path:', savedPath);
+      setUserPath(savedPath);
+      
+      // Small delay to ensure component is fully mounted
+      const timer = setTimeout(() => {
+        if (!isNavigatingRef.current) {
+          onPathSelect(savedPath as 'lost' | 'awakening' | 'ready');
+        }
+      }, 100);
+      
+      timeoutRefs.current.push(timer);
+    }
+  }, [onPathSelect]);
+
   // Determine language from URL or localStorage
   useEffect(() => {
     try {
@@ -65,6 +84,12 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
     
     try {
       setIsVisible(true);
+      
+      // Try to get user name from localStorage
+      const savedName = localStorage.getItem('neuropul_user_name');
+      if (savedName) {
+        console.log(`User name loaded: ${savedName}`);
+      }
       
       const traeMessage = getTraeMessage();
       let currentText = '';
@@ -151,11 +176,9 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
     return () => {
       // Clear all timeouts
       timeoutRefs.current.forEach(timeout => clearTimeout(timeout));
-      timeoutRefs.current = [];
       
       if (inactivityTimerRef.current) {
         clearTimeout(inactivityTimerRef.current);
-        inactivityTimerRef.current = null;
       }
       
       // Clean up audio resources
@@ -245,6 +268,7 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
         
         // Save user input for context
         localStorage.setItem('neuropul_user_input', userInput);
+        localStorage.setItem('neuropul_user_path', detectedPath);
         
         // Handle the detected path
         console.log(`Detected path from input: ${detectedPath}`);

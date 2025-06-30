@@ -4,7 +4,6 @@ import ResponseLostSoul from '../components/ResponseLostSoul';
 import ResponseAwakening from '../components/ResponseAwakening';
 import ResponseHackerReady from '../components/ResponseHackerReady';
 import { AnimatePresence, motion } from 'framer-motion';
-import { logError } from '../lib/utils/errorLogger';
 
 type Screen = 'intro' | 'lost' | 'awakening' | 'ready' | 'portal';
 
@@ -17,10 +16,24 @@ const TraeAwakensPage: React.FC = () => {
   // Refs for cleanup
   const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
   const isNavigatingRef = useRef<boolean>(false);
-  const timeoutRefs = useRef<NodeJS.Timeout[]>([]);
 
   // Initialize session and tracking
   useEffect(() => {
+    // Check if there's a saved path and screen
+    const savedPath = localStorage.getItem('neuropul_user_path');
+    const savedScreen = localStorage.getItem('neuropul_current_screen');
+    
+    if (savedPath) {
+      setUserPath(savedPath);
+      
+      // If there's a saved screen that's not 'intro', restore it
+      if (savedScreen && savedScreen !== 'intro' && 
+          ['lost', 'awakening', 'ready', 'portal'].includes(savedScreen)) {
+        console.log(`Restoring saved screen: ${savedScreen}`);
+        setCurrentScreen(savedScreen as Screen);
+      }
+    }
+    
     // Generate session ID if not exists
     const existingSessionId = localStorage.getItem('neuropul_session_id');
     if (existingSessionId) {
@@ -45,12 +58,6 @@ const TraeAwakensPage: React.FC = () => {
     // Track last visit date
     localStorage.setItem('neuropul_last_visit', new Date().toISOString());
     
-    // Check for returning user
-    const savedPath = localStorage.getItem('neuropul_user_path');
-    if (savedPath) {
-      setUserPath(savedPath);
-    }
-    
     // Log user agent for analytics
     const userAgent = navigator.userAgent;
     localStorage.setItem('neuropul_user_agent', userAgent);
@@ -69,140 +76,98 @@ const TraeAwakensPage: React.FC = () => {
     return () => {
       if (inactivityTimerRef.current) {
         clearTimeout(inactivityTimerRef.current);
-        inactivityTimerRef.current = null;
       }
-      
-      // Clear all timeouts
-      timeoutRefs.current.forEach(timeout => clearTimeout(timeout));
-      timeoutRefs.current = [];
     };
   }, []);
 
   const handlePathSelect = (path: 'lost' | 'awakening' | 'ready') => {
-    if (isNavigatingRef.current) {
-      console.log('Navigation already in progress, ignoring');
-      return;
-    }
-    
+    if (isNavigatingRef.current) return;
     isNavigatingRef.current = true;
     
-    try {
-      setCurrentScreen(path);
-      setUserPath(path);
-      
-      // Log user selection
-      console.log(`User selected path: ${path}`);
-      console.log(`Session ID: ${sessionId}`);
-      console.log(`View count: ${viewCount}`);
-      
-      // Track path selection
-      localStorage.setItem('neuropul_user_path', path);
-      localStorage.setItem('neuropul_path_selected_at', new Date().toISOString());
-      
-      // Set level_selected flag
-      localStorage.setItem('neuropul_level_selected', 'true');
-      
-      // Reset navigation lock after a short delay
-      const resetTimeout = setTimeout(() => {
-        isNavigatingRef.current = false;
-      }, 300);
-      
-      timeoutRefs.current.push(resetTimeout);
-    } catch (error) {
-      console.error('Error in handlePathSelect:', error);
-      logError(error, {
-        component: 'TraeAwakensPage',
-        action: 'handlePathSelect',
-        additionalData: { path }
-      });
-      
+    setCurrentScreen(path);
+    setUserPath(path);
+    
+    // Save current screen and path to localStorage
+    localStorage.setItem('neuropul_current_screen', path);
+    localStorage.setItem('neuropul_user_path', path);
+    
+    // Log user selection
+    console.log(`User selected path: ${path}`);
+    console.log(`Session ID: ${sessionId}`);
+    console.log(`View count: ${viewCount}`);
+    
+    // Track path selection
+    localStorage.setItem('neuropul_path_selected_at', new Date().toISOString());
+    
+    // Set level_selected flag
+    localStorage.setItem('neuropul_level_selected', 'true');
+    
+    // Reset navigation lock after a short delay
+    setTimeout(() => {
       isNavigatingRef.current = false;
-    }
+    }, 300);
   };
 
   const handleBack = () => {
-    if (isNavigatingRef.current) {
-      console.log('Navigation already in progress, ignoring');
-      return;
-    }
-    
+    if (isNavigatingRef.current) return;
     isNavigatingRef.current = true;
     
-    try {
-      setCurrentScreen('intro');
-      
-      // Log navigation
-      console.log('User navigated back to intro');
-      
-      // Reset navigation lock after a short delay
-      const resetTimeout = setTimeout(() => {
-        isNavigatingRef.current = false;
-      }, 300);
-      
-      timeoutRefs.current.push(resetTimeout);
-    } catch (error) {
-      console.error('Error in handleBack:', error);
-      logError(error, {
-        component: 'TraeAwakensPage',
-        action: 'handleBack'
-      });
-      
+    setCurrentScreen('intro');
+    
+    // Update localStorage
+    localStorage.setItem('neuropul_current_screen', 'intro');
+    
+    // Log navigation
+    console.log('User navigated back to intro');
+    
+    // Reset navigation lock after a short delay
+    setTimeout(() => {
       isNavigatingRef.current = false;
-    }
+    }, 300);
   };
 
   const handleContinueToPortal = () => {
-    if (isNavigatingRef.current) {
-      console.log('Navigation already in progress, ignoring');
-      return;
-    }
-    
+    if (isNavigatingRef.current) return;
     isNavigatingRef.current = true;
     
-    try {
-      setCurrentScreen('portal');
-      
-      // Log completion
-      console.log('User completed introduction');
-      console.log(`Final path: ${userPath}`);
-      
-      // Set completion flag
-      localStorage.setItem('neuropul_intro_completed', 'true');
-      localStorage.setItem('neuropul_intro_completed_at', new Date().toISOString());
-      
-      // Check if this is the third message viewed (for CTA trigger)
-      const messagesViewed = parseInt(localStorage.getItem('neuropul_viewed_messages') || '0');
-      if (messagesViewed >= 3) {
-        // Set flag for CTA
-        localStorage.setItem('neuropul_show_cta', 'true');
+    setCurrentScreen('portal');
+    
+    // Update localStorage
+    localStorage.setItem('neuropul_current_screen', 'portal');
+    
+    // Log completion
+    console.log('User completed introduction');
+    console.log(`Final path: ${userPath}`);
+    
+    // Set completion flag
+    localStorage.setItem('neuropul_intro_completed', 'true');
+    localStorage.setItem('neuropul_intro_completed_at', new Date().toISOString());
+    
+    // Check if this is the third message viewed (for CTA trigger)
+    const messagesViewed = parseInt(localStorage.getItem('neuropul_viewed_messages') || '0');
+    if (messagesViewed >= 3) {
+      // Set flag for CTA
+      localStorage.setItem('neuropul_show_cta', 'true');
+    }
+    
+    // In a real implementation, you would navigate to the awakening portal or dashboard
+    // For now, we'll just redirect to the home page after a delay
+    const redirectTimeout = setTimeout(() => {
+      // Check if we should show CTA
+      if (localStorage.getItem('neuropul_show_cta') === 'true' && localStorage.getItem('neuropul_is_paid') !== 'true') {
+        // Redirect to CTA page
+        window.location.href = '/premium';
+      } else {
+        // Redirect to main app
+        window.location.href = '/';
       }
       
-      // In a real implementation, you would navigate to the awakening portal or dashboard
-      // For now, we'll just redirect to the home page after a delay
-      const redirectTimeout = setTimeout(() => {
-        // Check if we should show CTA
-        if (localStorage.getItem('neuropul_show_cta') === 'true' && localStorage.getItem('neuropul_is_paid') !== 'true') {
-          // Redirect to CTA page
-          window.location.href = '/premium';
-        } else {
-          // Redirect to main app
-          window.location.href = '/';
-        }
-        
-        // Reset navigation lock
-        isNavigatingRef.current = false;
-      }, 500);
-      
-      timeoutRefs.current.push(redirectTimeout);
-    } catch (error) {
-      console.error('Error in handleContinueToPortal:', error);
-      logError(error, {
-        component: 'TraeAwakensPage',
-        action: 'handleContinueToPortal'
-      });
-      
+      // Reset navigation lock
       isNavigatingRef.current = false;
-    }
+    }, 500);
+    
+    // Cleanup function for the timeout
+    return () => clearTimeout(redirectTimeout);
   };
 
   // Auto-reset session after inactivity
@@ -210,11 +175,10 @@ const TraeAwakensPage: React.FC = () => {
     // Clear previous timer if it exists
     if (inactivityTimerRef.current) {
       clearTimeout(inactivityTimerRef.current);
-      inactivityTimerRef.current = null;
     }
     
     // Set new timer
-    const timer = setTimeout(() => {
+    inactivityTimerRef.current = setTimeout(() => {
       // If user has been inactive for 30 minutes, reset session
       const lastActivity = localStorage.getItem('neuropul_last_activity');
       if (lastActivity) {
@@ -235,9 +199,6 @@ const TraeAwakensPage: React.FC = () => {
       }
     }, 60000); // Check every minute
     
-    inactivityTimerRef.current = timer;
-    timeoutRefs.current.push(timer);
-    
     // Update last activity timestamp
     localStorage.setItem('neuropul_last_activity', new Date().toISOString());
     
@@ -245,24 +206,9 @@ const TraeAwakensPage: React.FC = () => {
     return () => {
       if (inactivityTimerRef.current) {
         clearTimeout(inactivityTimerRef.current);
-        inactivityTimerRef.current = null;
       }
     };
   }, [currentScreen]);
-
-  // Clean up all timeouts when component unmounts
-  useEffect(() => {
-    return () => {
-      // Clear all timeouts
-      timeoutRefs.current.forEach(timeout => clearTimeout(timeout));
-      timeoutRefs.current = [];
-      
-      if (inactivityTimerRef.current) {
-        clearTimeout(inactivityTimerRef.current);
-        inactivityTimerRef.current = null;
-      }
-    };
-  }, []);
 
   return (
     <div className="relative min-h-screen overflow-hidden">

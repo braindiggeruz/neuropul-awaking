@@ -177,16 +177,8 @@ export const isVibrationSupported = (): boolean => {
  */
 export const cleanupAudio = (): void => {
   if (audioContext) {
-    try {
-      audioContext.close();
-      audioContext = null;
-      console.log('Audio context closed');
-    } catch (error) {
-      console.error('Error closing audio context:', error);
-      logError(error, {
-        component: 'audioUtils',
-        action: 'cleanupAudio'
-      });
-    }
+    audioContext.close();
+    audioContext = null;
+    console.log('Audio context closed');
   }
 };

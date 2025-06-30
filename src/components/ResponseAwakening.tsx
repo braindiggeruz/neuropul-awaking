@@ -23,7 +23,6 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
   // Refs to prevent stale closures in event handlers
   const isNavigatingRef = useRef(false);
   const languageRef = useRef(language);
-  const timeoutRefs = useRef<NodeJS.Timeout[]>([]);
 
   // Update refs when state changes
   useEffect(() => {
@@ -81,7 +80,7 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
           setIsTyping(false);
           
           // Show continue button after message is fully typed
-          const continueTimeout = setTimeout(() => {
+          setTimeout(() => {
             setShowContinue(true);
             
             // Award XP for reaching this step
@@ -94,17 +93,11 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
             playSound('xp');
             vibrate([50, 30, 50]);
           }, 500);
-          
-          timeoutRefs.current.push(continueTimeout);
         }
       }, 20); // Typing speed
       
-      timeoutRefs.current.push(typingInterval);
-      
       return () => {
         clearInterval(typingInterval);
-        timeoutRefs.current.forEach(timeout => clearTimeout(timeout));
-        timeoutRefs.current = [];
       };
     } catch (error) {
       console.error('Error in typing effect:', error);
@@ -205,20 +198,19 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
       // Set flag for awakening
       localStorage.setItem('neuropul_awakening_started', 'true');
       
+      // Save current screen
+      localStorage.setItem('neuropul_current_screen', 'portal');
+      
       // Call onContinue with a small delay
-      const continueTimeout = setTimeout(() => {
+      setTimeout(() => {
         onContinue();
         
         // Reset navigation state after a delay in case the navigation fails
-        const resetTimeout = setTimeout(() => {
+        setTimeout(() => {
           setIsNavigating(false);
           isNavigatingRef.current = false;
         }, 1000);
-        
-        timeoutRefs.current.push(resetTimeout);
       }, 100);
-      
-      timeoutRefs.current.push(continueTimeout);
     } catch (error) {
       console.error('Error in handleContinue:', error);
       logError(error, {
@@ -246,20 +238,19 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
       playSound('click');
       vibrate([30]);
       
+      // Save current screen
+      localStorage.setItem('neuropul_current_screen', 'intro');
+      
       // Call onBack with a small delay
-      const backTimeout = setTimeout(() => {
+      setTimeout(() => {
         onBack();
         
         // Reset navigation state after a delay in case the navigation fails
-        const resetTimeout = setTimeout(() => {
+        setTimeout(() => {
           setIsNavigating(false);
           isNavigatingRef.current = false;
         }, 1000);
-        
-        timeoutRefs.current.push(resetTimeout);
       }, 100);
-      
-      timeoutRefs.current.push(backTimeout);
     } catch (error) {
       console.error('Error in handleBack:', error);
       logError(error, {
@@ -312,10 +303,6 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
       setMessage('');
       setShowContinue(false);
       
-      // Clear existing timeouts
-      timeoutRefs.current.forEach(timeout => clearTimeout(timeout));
-      timeoutRefs.current = [];
-      
       // Restart typing effect with new language
       const traeMessage = getTraeMessage();
       let currentText = '';
@@ -331,15 +318,11 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
           setIsTyping(false);
           
           // Show continue button after message is fully typed
-          const continueTimeout = setTimeout(() => {
+          setTimeout(() => {
             setShowContinue(true);
           }, 500);
-          
-          timeoutRefs.current.push(continueTimeout);
         }
       }, 20);
-      
-      timeoutRefs.current.push(typingInterval);
     } catch (error) {
       console.error('Error changing language:', error);
       logError(error, {
@@ -348,14 +331,6 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
       });
     }
   };
-
-  // Clean up timeouts when component unmounts
-  useEffect(() => {
-    return () => {
-      timeoutRefs.current.forEach(timeout => clearTimeout(timeout));
-      timeoutRefs.current = [];
-    };
-  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-blue-900 flex items-center justify-center p-4 overflow-hidden">

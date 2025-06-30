@@ -13,7 +13,6 @@ const getAudioContext = (): AudioContext | null => {
       const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
       if (AudioContextClass) {
         audioContext = new AudioContextClass();
-        console.log('Audio context initialized');
       } else {
         console.warn('Web Audio API not supported in this browser');
         return null;
@@ -21,8 +20,10 @@ const getAudioContext = (): AudioContext | null => {
     }
     
     // Resume context if it's suspended (needed for Safari)
-    if (audioContext.state === 'suspended') {
-      audioContext.resume();
+    if (audioContext && audioContext.state === 'suspended') {
+      audioContext.resume().catch(err => {
+        console.warn('Failed to resume audio context:', err);
+      });
     }
     
     return audioContext;
@@ -138,12 +139,15 @@ export const playSound = (
       }
     };
   } catch (error) {
-    console.error('Error playing sound:', error);
-    logError(error, {
-      component: 'audioUtils',
-      action: 'playSound',
-      additionalData: { soundType: type }
-    });
+    // Silently fail in production
+    if (import.meta.env.MODE !== 'production') {
+      console.error('Error playing sound:', error);
+      logError(error, {
+        component: 'audioUtils',
+        action: 'playSound',
+        additionalData: { soundType: type }
+      });
+    }
   }
 };
 
@@ -162,11 +166,14 @@ export const vibrate = (pattern: number[], enabled: boolean = true): void => {
       console.log('Vibration API not supported in this browser');
     }
   } catch (error) {
-    console.error('Error triggering vibration:', error);
-    logError(error, {
-      component: 'audioUtils',
-      action: 'vibrate'
-    });
+    // Silently fail in production
+    if (import.meta.env.MODE !== 'production') {
+      console.error('Error triggering vibration:', error);
+      logError(error, {
+        component: 'audioUtils',
+        action: 'vibrate'
+      });
+    }
   }
 };
 
@@ -210,7 +217,6 @@ export const cleanupAudio = (): void => {
     if (audioContext) {
       audioContext.close().then(() => {
         audioContext = null;
-        console.log('Audio context closed');
       }).catch(err => {
         console.error('Error closing audio context:', err);
       });

@@ -12,6 +12,7 @@ interface FocusManagerProps {
 const FocusManager: React.FC<FocusManagerProps> = ({ children }) => {
   const lastFocusedElement = useRef<HTMLElement | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const isMountedRef = useRef<boolean>(true);
 
   // Save the last focused element before navigation
   useEffect(() => {
@@ -25,6 +26,7 @@ const FocusManager: React.FC<FocusManagerProps> = ({ children }) => {
       
       // Cleanup
       return () => {
+        isMountedRef.current = false;
         window.removeEventListener('beforeunload', saveFocus);
       };
     } catch (error) {

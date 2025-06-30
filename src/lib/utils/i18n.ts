@@ -51,8 +51,6 @@ export const setUserLanguage = (language: Language): void => {
     url.searchParams.set('lang', language);
     window.history.replaceState({}, '', url.toString());
     
-    console.log(`Language set to: ${language}`);
-    
     // Update HTML lang attribute
     document.documentElement.lang = language;
   } catch (error) {
@@ -79,7 +77,6 @@ export const translate = (key: string, language?: Language): string => {
       }
       
       if (typeof fallbackValue === 'string') {
-        console.warn(`Missing Uzbek translation for key: ${key}, using Russian fallback`);
         return fallbackValue;
       }
     }
@@ -88,7 +85,6 @@ export const translate = (key: string, language?: Language): string => {
       return value;
     }
     
-    console.warn(`Translation key not found: ${key}`);
     return key;
   } catch (error) {
     console.error('Translation error:', error);

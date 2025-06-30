@@ -6,6 +6,7 @@ import ResponseHackerReady from '../components/ResponseHackerReady';
 import { AnimatePresence, motion } from 'framer-motion';
 import { saveUserProgress, loadUserProgress, updateUserProgress } from '../utils/progressUtils';
 import { logError } from '../lib/utils/errorLogger';
+import { cleanupAudio } from '../utils/audioUtils';
 
 type Screen = 'intro' | 'lost' | 'awakening' | 'ready' | 'portal';
 
@@ -19,6 +20,7 @@ const TraeAwakensPage: React.FC = () => {
   const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
   const isNavigatingRef = useRef<boolean>(false);
   const timeoutRefs = useRef<NodeJS.Timeout[]>([]);
+  const isMountedRef = useRef<boolean>(true);
 
   // Initialize session and tracking
   useEffect(() => {
@@ -27,15 +29,12 @@ const TraeAwakensPage: React.FC = () => {
       const savedPath = localStorage.getItem('neuropul_user_path');
       const savedScreen = localStorage.getItem('neuropul_current_screen');
       
-      console.log('Initializing with saved path:', savedPath, 'and screen:', savedScreen);
-      
       if (savedPath) {
         setUserPath(savedPath);
         
         // If there's a saved screen that's not 'intro', restore it
         if (savedScreen && savedScreen !== 'intro' && 
             ['lost', 'awakening', 'ready', 'portal'].includes(savedScreen)) {
-          console.log(`Restoring saved screen: ${savedScreen}`);
           setCurrentScreen(savedScreen as Screen);
         }
       }
@@ -63,10 +62,6 @@ const TraeAwakensPage: React.FC = () => {
       
       // Track last visit date
       localStorage.setItem('neuropul_last_visit', new Date().toISOString());
-      
-      // Log user agent for analytics
-      const userAgent = navigator.userAgent;
-      localStorage.setItem('neuropul_user_agent', userAgent);
       
       // Initialize XP if not exists
       if (!localStorage.getItem('neuropul_xp')) {
@@ -102,29 +97,35 @@ const TraeAwakensPage: React.FC = () => {
       });
     }
     
+    // Set mounted ref
+    isMountedRef.current = true;
+    
     // Cleanup function
     return () => {
+      isMountedRef.current = false;
+      
       if (inactivityTimerRef.current) {
         clearTimeout(inactivityTimerRef.current);
+        inactivityTimerRef.current = null;
       }
       
       // Clear all timeouts
       timeoutRefs.current.forEach(timeout => clearTimeout(timeout));
+      
+      // Clean up audio
+      cleanupAudio();
     };
   }, []);
 
   const handlePathSelect = (path: 'lost' | 'awakening' | 'ready') => {
     // Prevent multiple navigation attempts
     if (isNavigatingRef.current) {
-      console.log('Navigation already in progress, ignoring');
       return;
     }
     
     isNavigatingRef.current = true;
     
     try {
-      console.log(`User selected path: ${path}`);
-      
       // Update state
       setCurrentScreen(path);
       setUserPath(path);
@@ -132,10 +133,6 @@ const TraeAwakensPage: React.FC = () => {
       // Save current screen and path to localStorage
       localStorage.setItem('neuropul_current_screen', path);
       localStorage.setItem('neuropul_user_path', path);
-      
-      // Log user selection
-      console.log(`Session ID: ${sessionId}`);
-      console.log(`View count: ${viewCount}`);
       
       // Track path selection
       localStorage.setItem('neuropul_path_selected_at', new Date().toISOString());
@@ -152,7 +149,9 @@ const TraeAwakensPage: React.FC = () => {
       
       // Reset navigation lock after a delay
       const resetTimeout = setTimeout(() => {
-        isNavigatingRef.current = false;
+        if (isMountedRef.current) {
+          isNavigatingRef.current = false;
+        }
       }, 500);
       
       timeoutRefs.current.push(resetTimeout);
@@ -171,15 +170,12 @@ const TraeAwakensPage: React.FC = () => {
   const handleBack = () => {
     // Prevent multiple navigation attempts
     if (isNavigatingRef.current) {
-      console.log('Navigation already in progress, ignoring');
       return;
     }
     
     isNavigatingRef.current = true;
     
     try {
-      console.log('User navigated back to intro');
-      
       // Update state
       setCurrentScreen('intro');
       
@@ -194,7 +190,9 @@ const TraeAwakensPage: React.FC = () => {
       
       // Reset navigation lock after a delay
       const resetTimeout = setTimeout(() => {
-        isNavigatingRef.current = false;
+        if (isMountedRef.current) {
+          isNavigatingRef.current = false;
+        }
       }, 500);
       
       timeoutRefs.current.push(resetTimeout);
@@ -213,23 +211,17 @@ const TraeAwakensPage: React.FC = () => {
   const handleContinueToPortal = () => {
     // Prevent multiple navigation attempts
     if (isNavigatingRef.current) {
-      console.log('Navigation already in progress, ignoring');
       return;
     }
     
     isNavigatingRef.current = true;
     
     try {
-      console.log('User continuing to portal');
-      
       // Update state
       setCurrentScreen('portal');
       
       // Update localStorage
       localStorage.setItem('neuropul_current_screen', 'portal');
-      
-      // Log completion
-      console.log(`Final path: ${userPath}`);
       
       // Set completion flag
       localStorage.setItem('neuropul_intro_completed', 'true');
@@ -251,13 +243,15 @@ const TraeAwakensPage: React.FC = () => {
       // In a real implementation, you would navigate to the awakening portal or dashboard
       // For now, we'll just redirect to the home page after a delay
       const redirectTimeout = setTimeout(() => {
-        // Check if we should show CTA
-        if (localStorage.getItem('neuropul_show_cta') === 'true' && localStorage.getItem('neuropul_is_paid') !== 'true') {
-          // Redirect to CTA page
-          window.location.href = '/premium';
-        } else {
-          // Redirect to main app
-          window.location.href = '/';
+        if (isMountedRef.current) {
+          // Check if we should show CTA
+          if (localStorage.getItem('neuropul_show_cta') === 'true' && localStorage.getItem('neuropul_is_paid') !== 'true') {
+            // Redirect to CTA page
+            window.location.href = '/premium';
+          } else {
+            // Redirect to main app
+            window.location.href = '/';
+          }
         }
         
         // Reset navigation lock
@@ -286,22 +280,23 @@ const TraeAwakensPage: React.FC = () => {
     
     // Set new timer
     inactivityTimerRef.current = setTimeout(() => {
-      // If user has been inactive for 30 minutes, reset session
-      const lastActivity = localStorage.getItem('neuropul_last_activity');
-      if (lastActivity) {
-        const lastActivityTime = new Date(lastActivity).getTime();
-        const currentTime = new Date().getTime();
-        const inactiveTime = currentTime - lastActivityTime;
-        
-        // 30 minutes in milliseconds
-        if (inactiveTime > 30 * 60 * 1000) {
-          console.log('Session reset due to inactivity');
-          // Don't clear everything, just reset the current session
-          localStorage.removeItem('neuropul_session_id');
-          // Generate new session
-          const newSessionId = `session_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-          localStorage.setItem('neuropul_session_id', newSessionId);
-          setSessionId(newSessionId);
+      if (isMountedRef.current) {
+        // If user has been inactive for 30 minutes, reset session
+        const lastActivity = localStorage.getItem('neuropul_last_activity');
+        if (lastActivity) {
+          const lastActivityTime = new Date(lastActivity).getTime();
+          const currentTime = new Date().getTime();
+          const inactiveTime = currentTime - lastActivityTime;
+          
+          // 30 minutes in milliseconds
+          if (inactiveTime > 30 * 60 * 1000) {
+            // Don't clear everything, just reset the current session
+            localStorage.removeItem('neuropul_session_id');
+            // Generate new session
+            const newSessionId = `session_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+            localStorage.setItem('neuropul_session_id', newSessionId);
+            setSessionId(newSessionId);
+          }
         }
       }
     }, 60000); // Check every minute
@@ -386,52 +381,6 @@ const TraeAwakensPage: React.FC = () => {
           </motion.div>
         )}
       </AnimatePresence>
-      
-      {/* Global CSS for cyberpunk effects */}
-      <style jsx global>{`
-        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;900&display=swap');
-        
-        @keyframes digitalRain {
-          0% { transform: translateY(-100px); }
-          100% { transform: translateY(100vh); }
-        }
-        
-        .bg-scanline {
-          background: linear-gradient(
-            to bottom,
-            transparent 50%,
-            rgba(0, 0, 0, 0.5) 50%
-          );
-          background-size: 100% 4px;
-        }
-        
-        .glitch-text {
-          position: relative;
-          animation: glitch 3s infinite;
-          color: rgba(139, 92, 246, 0.5);
-        }
-        
-        @keyframes glitch {
-          0% { transform: translate(0); }
-          20% { transform: translate(-2px, 2px); }
-          40% { transform: translate(-2px, -2px); }
-          60% { transform: translate(2px, 2px); }
-          80% { transform: translate(2px, -2px); }
-          100% { transform: translate(0); }
-        }
-        
-        .glitch-corner {
-          background: linear-gradient(45deg, transparent 48%, #00ffff 49%, transparent 51%);
-          animation: cornerGlitch 2s infinite;
-        }
-        
-        @keyframes cornerGlitch {
-          0% { transform: scale(1); opacity: 0.3; }
-          50% { transform: scale(1.2); opacity: 0.6; }
-          51% { transform: scale(0.8); opacity: 0.3; }
-          100% { transform: scale(1); opacity: 0.3; }
-        }
-      `}</style>
     </div>
   );
 };

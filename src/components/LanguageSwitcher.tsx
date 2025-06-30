@@ -17,10 +17,15 @@ const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({
   
   // Use ref to prevent multiple rapid clicks
   const isChangingRef = useRef(false);
+  const isMountedRef = useRef(true);
 
   // Update language state when component mounts
   useEffect(() => {
     setLanguage(getUserLanguage());
+    
+    return () => {
+      isMountedRef.current = false;
+    };
   }, []);
 
   const toggleLanguage = () => {
@@ -46,8 +51,10 @@ const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({
       
       // Add a small delay to prevent rapid toggling
       setTimeout(() => {
-        setIsChanging(false);
-        isChangingRef.current = false;
+        if (isMountedRef.current) {
+          setIsChanging(false);
+          isChangingRef.current = false;
+        }
       }, 500);
     } catch (error) {
       logError(error, {

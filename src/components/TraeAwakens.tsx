@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Brain, Zap, Skull, Rocket, AlienIcon } from 'lucide-react';
+import { Brain, Zap, Skull, Rocket, PenIcon as AlienIcon } from 'lucide-react';
 
 interface TraeAwakensProps {
   onPathSelect: (path: 'lost' | 'awakening' | 'ready') => void;

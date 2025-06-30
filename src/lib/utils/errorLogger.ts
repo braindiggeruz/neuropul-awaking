@@ -60,9 +60,17 @@ export const logError = async (
           error_message: errorMessage,
           stack_trace: errorStack || '',
           source: 'client',
-          user_id: context.userId,
+          user_id: context.userId || localStorage.getItem('neuropul_user_id') || sessionStorage.getItem('neuropul_session_id'),
           level,
-          additional_data: context.additionalData
+          additional_data: {
+            ...context.additionalData,
+            userAgent: navigator.userAgent,
+            url: window.location.href,
+            timestamp: new Date().toISOString(),
+            sessionId: localStorage.getItem('neuropul_session_id') || sessionStorage.getItem('neuropul_session_id'),
+            viewCount: localStorage.getItem('neuropul_view_count'),
+            userPath: localStorage.getItem('neuropul_user_path')
+          }
         }),
       });
       

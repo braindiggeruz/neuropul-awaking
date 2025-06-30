@@ -1,0 +1,174 @@
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;900&display=swap');
+
+/* Cyberpunk animations */
+@keyframes digitalRain {
+  0% { transform: translateY(-100px); }
+  100% { transform: translateY(100vh); }
+}
+
+@keyframes glitch {
+  0% { transform: translate(0); }
+  20% { transform: translate(-2px, 2px); }
+  40% { transform: translate(-2px, -2px); }
+  60% { transform: translate(2px, 2px); }
+  80% { transform: translate(2px, -2px); }
+  100% { transform: translate(0); }
+}
+
+@keyframes cornerGlitch {
+  0% { transform: scale(1); opacity: 0.3; }
+  50% { transform: scale(1.2); opacity: 0.6; }
+  51% { transform: scale(0.8); opacity: 0.3; }
+  100% { transform: scale(1); opacity: 0.3; }
+}
+
+@keyframes neonPulse {
+  0% { box-shadow: 0 0 5px rgba(139, 92, 246, 0.5), 0 0 10px rgba(139, 92, 246, 0.3); }
+  50% { box-shadow: 0 0 10px rgba(139, 92, 246, 0.8), 0 0 20px rgba(139, 92, 246, 0.5); }
+  100% { box-shadow: 0 0 5px rgba(139, 92, 246, 0.5), 0 0 10px rgba(139, 92, 246, 0.3); }
+}
+
+@keyframes textFlicker {
+  0% { opacity: 1; }
+  10% { opacity: 0.8; }
+  11% { opacity: 1; }
+  50% { opacity: 1; }
+  51% { opacity: 0.9; }
+  60% { opacity: 1; }
+  92% { opacity: 1; }
+  93% { opacity: 0.8; }
+  94% { opacity: 1; }
+}
+
+/* Cyberpunk elements */
+.bg-scanline {
+  background: linear-gradient(
+    to bottom,
+    transparent 50%,
+    rgba(0, 0, 0, 0.5) 50%
+  );
+  background-size: 100% 4px;
+}
+
+.glitch-text {
+  position: relative;
+  animation: glitch 3s infinite;
+  color: rgba(139, 92, 246, 0.5);
+}
+
+.glitch-corner {
+  background: linear-gradient(45deg, transparent 48%, #00ffff 49%, transparent 51%);
+  animation: cornerGlitch 2s infinite;
+}
+
+.neon-border {
+  border: 1px solid rgba(139, 92, 246, 0.5);
+  box-shadow: 0 0 10px rgba(139, 92, 246, 0.5), inset 0 0 5px rgba(139, 92, 246, 0.2);
+  animation: neonPulse 2s infinite;
+}
+
+.text-flicker {
+  animation: textFlicker 3s infinite;
+}
+
+.cyberpunk-font {
+  font-family: 'Orbitron', sans-serif;
+}
+
+.terminal-font {
+  font-family: 'Courier New', monospace;
+}
+
+/* Cyberpunk grid background */
+.cyberpunk-grid {
+  background-image: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxkZWZzPjxwYXR0ZXJuIGlkPSJncmlkIiB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHBhdHRlcm5Vbml0cz0idXNlclNwYWNlT25Vc2UiPjxwYXRoIGQ9Ik0gNDAgMCBMIDAgMCAwIDQwIiBmaWxsPSJub25lIiBzdHJva2U9IiM4YjVjZjYiIHN0cm9rZS13aWR0aD0iMC41Ii8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIiBvcGFjaXR5PSIwLjA1Ii8+PC9zdmc+');
+}
+
+/* Cyberpunk button styles */
+.cyberpunk-button {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s;
+}
+
+.cyberpunk-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.2),
+    transparent
+  );
+  transition: all 0.6s;
+}
+
+.cyberpunk-button:hover::before {
+  left: 100%;
+}
+
+.cyberpunk-button:active {
+  transform: scale(0.95);
+}
+
+/* Cyberpunk input styles */
+.cyberpunk-input {
+  background: rgba(30, 30, 30, 0.7);
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  color: white;
+  padding: 0.5rem 1rem;
+  transition: all 0.3s;
+}
+
+.cyberpunk-input:focus {
+  border-color: rgba(139, 92, 246, 0.8);
+  box-shadow: 0 0 10px rgba(139, 92, 246, 0.5);
+  outline: none;
+}
+
+/* Cyberpunk card styles */
+.cyberpunk-card {
+  background: rgba(0, 0, 0, 0.7);
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(10px);
+  position: relative;
+  overflow: hidden;
+}
+
+.cyberpunk-card::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  background: linear-gradient(45deg, #8b5cf6, #3b82f6, #06b6d4);
+  z-index: -1;
+  opacity: 0.3;
+  border-radius: inherit;
+}
+
+/* Digital rain effect */
+.digital-rain {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: hidden;
+  opacity: 0.1;
+}
+
+.digital-rain-character {
+  position: absolute;
+  color: #06b6d4;
+  font-family: monospace;
+  font-size: 12px;
+  animation: digitalRain linear infinite;
+}

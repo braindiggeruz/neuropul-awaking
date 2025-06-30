@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Brain, Zap, Skull, Rocket, PenIcon as AlienIcon } from 'lucide-react';
-import { getUserLanguage, translate } from '../lib/utils/i18n';
+import { getUserLanguage, setUserLanguage } from '../lib/utils/i18n';
 import LanguageSwitcher from './LanguageSwitcher';
 
 interface TraeAwakensProps {
@@ -17,7 +17,7 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
   const [inactivityTimer, setInactivityTimer] = useState<NodeJS.Timeout | null>(null);
   const [language, setLanguage] = useState(getUserLanguage());
 
-  // Trae's initial message based on language
+  // Get Trae's messages based on language
   const getTraeMessage = () => {
     return language === 'ru' 
       ? "Ты здесь. Наконец-то. Я Trae — твой проводник в мире AI. Не буду тратить время на формальности. Мне нужно знать только одно..."
@@ -173,6 +173,7 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
 
   const handleLanguageChange = (newLanguage: 'ru' | 'uz') => {
     setLanguage(newLanguage);
+    setUserLanguage(newLanguage);
   };
 
   return (

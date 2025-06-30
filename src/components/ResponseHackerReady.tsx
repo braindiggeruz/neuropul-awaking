@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Brain, ArrowRight, Code, Zap, Terminal, Lock } from 'lucide-react';
-import { getUserLanguage } from '../lib/utils/i18n';
+import { getUserLanguage, setUserLanguage } from '../lib/utils/i18n';
 import LanguageSwitcher from './LanguageSwitcher';
 
 interface ResponseHackerReadyProps {
@@ -19,7 +19,7 @@ const ResponseHackerReady: React.FC<ResponseHackerReadyProps> = ({ onContinue, o
   const [isPaid, setIsPaid] = useState(false);
   const [language, setLanguage] = useState(getUserLanguage());
 
-  // Trae's response to those who are already familiar with AI
+  // Get Trae's response based on language
   const getTraeMessage = () => {
     return language === 'ru' 
       ? "Вот это я понимаю. Хакер в доме.\n\nРаз ты уже в теме, давай без лишних слов. У меня есть набор продвинутых AI-инструментов, которые выведут твои навыки на новый уровень.\n\nМы определим твой архетип, чтобы персонализировать опыт. Затем ты получишь доступ к генераторам идей, кода, контента и многому другому.\n\nПлюс, тут есть система XP и уровней. Каждое использование AI приносит опыт и разблокирует новые возможности."
@@ -172,6 +172,7 @@ const ResponseHackerReady: React.FC<ResponseHackerReadyProps> = ({ onContinue, o
 
   const handleLanguageChange = (newLanguage: 'ru' | 'uz') => {
     setLanguage(newLanguage);
+    setUserLanguage(newLanguage);
   };
 
   return (

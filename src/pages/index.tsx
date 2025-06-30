@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import TraeAwakensPage from './TraeAwakensPage';
 import { setupGlobalErrorHandling } from '../lib/utils/errorLogger';
+import { getUserLanguage } from '../lib/utils/i18n';
 
 export default function Home() {
   // Set up global error handling
@@ -15,12 +16,14 @@ export default function Home() {
     const userPath = localStorage.getItem('neuropul_user_path');
     const userName = localStorage.getItem('neuropul_user_name');
     const xp = parseInt(localStorage.getItem('neuropul_xp') || '0');
+    const language = getUserLanguage();
     
     console.log('System initialized:', {
       isPaid,
       userPath,
       userName,
-      xp
+      xp,
+      language
     });
     
     // Set default language

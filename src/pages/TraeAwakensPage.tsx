@@ -5,6 +5,7 @@ import ResponseAwakening from '../components/ResponseAwakening';
 import ResponseHackerReady from '../components/ResponseHackerReady';
 import { AnimatePresence, motion } from 'framer-motion';
 import { getUserLanguage, setUserLanguage } from '../lib/utils/i18n';
+import LanguageSwitcher from '../components/LanguageSwitcher';
 
 type Screen = 'intro' | 'lost' | 'awakening' | 'ready' | 'portal';
 
@@ -161,8 +162,20 @@ const TraeAwakensPage: React.FC = () => {
     return () => clearTimeout(inactivityTimeout);
   }, [currentScreen]);
 
+  const handleLanguageChange = (newLanguage: 'ru' | 'uz') => {
+    setLanguage(newLanguage);
+    setUserLanguage(newLanguage);
+  };
+
   return (
     <div className="relative min-h-screen overflow-hidden">
+      {/* Global language switcher (only shown on intro screen) */}
+      {currentScreen === 'intro' && (
+        <div className="absolute top-4 right-4 z-50">
+          <LanguageSwitcher onLanguageChange={handleLanguageChange} />
+        </div>
+      )}
+      
       <AnimatePresence mode="wait">
         {currentScreen === 'intro' && (
           <motion.div

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Brain, ArrowRight, HelpCircle, Zap, Lightbulb } from 'lucide-react';
-import { getUserLanguage } from '../lib/utils/i18n';
+import { getUserLanguage, setUserLanguage } from '../lib/utils/i18n';
 import LanguageSwitcher from './LanguageSwitcher';
 
 interface ResponseLostSoulProps {
@@ -17,7 +17,7 @@ const ResponseLostSoul: React.FC<ResponseLostSoulProps> = ({ onContinue, onBack 
   const [userName, setUserName] = useState('');
   const [language, setLanguage] = useState(getUserLanguage());
 
-  // Trae's response to lost souls
+  // Get Trae's response based on language
   const getTraeMessage = () => {
     return language === 'ru' 
       ? "Не парься, бро. Все мы когда-то были потеряны. AI — это просто инструмент, как молоток или отвёртка, только для мозга.\n\nПредставь, что у тебя есть умный помощник, который может писать тексты, создавать картинки, анализировать данные и отвечать на вопросы. Это и есть AI.\n\nНе нужно быть программистом или гением. Просто скажи, что тебе нужно — и AI сделает это за тебя. Это как иметь суперсилу."
@@ -137,6 +137,7 @@ const ResponseLostSoul: React.FC<ResponseLostSoulProps> = ({ onContinue, onBack 
 
   const handleLanguageChange = (newLanguage: 'ru' | 'uz') => {
     setLanguage(newLanguage);
+    setUserLanguage(newLanguage);
   };
 
   return (

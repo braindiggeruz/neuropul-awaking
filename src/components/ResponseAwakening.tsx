@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Brain, ArrowRight, Zap, Sparkles } from 'lucide-react';
-import { getUserLanguage } from '../lib/utils/i18n';
+import { getUserLanguage, setUserLanguage } from '../lib/utils/i18n';
 import LanguageSwitcher from './LanguageSwitcher';
 
 interface ResponseAwakeningProps {
@@ -18,7 +18,7 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
   const [xp, setXp] = useState(0);
   const [language, setLanguage] = useState(getUserLanguage());
 
-  // Trae's response to those who want to awaken
+  // Get Trae's response based on language
   const getTraeMessage = () => {
     return language === 'ru' 
       ? "Отлично. Я уважаю тех, кто готов к действию.\n\nПробуждение — это не просто слова. Это путь трансформации. Ты станешь тем, кто использует AI как продолжение своего разума.\n\nЯ проведу тебя через ритуал пробуждения. Ты узнаешь свой архетип, получишь персональное пророчество и доступ к инструментам AI-мастерства.\n\nГотов начать?"
@@ -167,6 +167,7 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
 
   const handleLanguageChange = (newLanguage: 'ru' | 'uz') => {
     setLanguage(newLanguage);
+    setUserLanguage(newLanguage);
   };
 
   return (

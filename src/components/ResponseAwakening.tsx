@@ -4,6 +4,7 @@ import { Brain, ArrowRight, Zap, Sparkles } from 'lucide-react';
 import { logError } from '../lib/utils/errorLogger';
 import { getUserLanguage, translate } from '../lib/utils/i18n';
 import LanguageSwitcher from './LanguageSwitcher';
+import { saveUserProgress, loadUserProgress, updateUserProgress, addUserXP } from '../utils/progressUtils';
 
 interface ResponseAwakeningProps {
   onContinue: () => void;
@@ -66,6 +67,12 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
         console.log(`User name loaded: ${savedName}`);
       }
       
+      // Load user progress
+      const userProgress = loadUserProgress();
+      if (userProgress) {
+        setXp(userProgress.xp || 0);
+      }
+      
       const traeMessage = getTraeMessage();
       let currentText = '';
       let currentIndex = 0;
@@ -84,10 +91,35 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
             setShowContinue(true);
             
             // Award XP for reaching this step
-            const currentXp = parseInt(localStorage.getItem('neuropul_xp') || '0');
+            const currentXp = userProgress?.xp || 0;
             const newXp = currentXp + 10;
-            localStorage.setItem('neuropul_xp', newXp.toString());
+            
+            // Update XP in state and localStorage
             setXp(newXp);
+            
+            // Update user progress
+            if (userProgress) {
+              updateUserProgress({
+                xp: newXp,
+                questStep: 1,
+                lastActive: new Date().toISOString()
+              });
+            } else {
+              // Create initial progress
+              saveUserProgress({
+                name: userName || '',
+                archetype: null,
+                avatarUrl: '',
+                xp: newXp,
+                level: 1,
+                prophecy: '',
+                awakened: false,
+                createdAt: new Date().toISOString(),
+                lastActive: new Date().toISOString(),
+                questStep: 1,
+                userPath: 'awakening'
+              });
+            }
             
             // Play XP sound
             playSound('xp');
@@ -188,6 +220,9 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
       localStorage.setItem('neuropul_user_experience', 'intermediate');
       localStorage.setItem('neuropul_user_path', 'awakening');
       
+      // Save current screen
+      localStorage.setItem('neuropul_current_screen', 'portal');
+      
       // Track progress
       const visitCount = parseInt(localStorage.getItem('neuropul_visit_count') || '0');
       localStorage.setItem('neuropul_visit_count', (visitCount + 1).toString());
@@ -198,8 +233,11 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
       // Set flag for awakening
       localStorage.setItem('neuropul_awakening_started', 'true');
       
-      // Save current screen
-      localStorage.setItem('neuropul_current_screen', 'portal');
+      // Update user progress
+      updateUserProgress({
+        questStep: 2,
+        lastActive: new Date().toISOString()
+      });
       
       // Call onContinue with a small delay
       setTimeout(() => {
@@ -241,6 +279,12 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
       // Save current screen
       localStorage.setItem('neuropul_current_screen', 'intro');
       
+      // Update user progress
+      updateUserProgress({
+        questStep: 0,
+        lastActive: new Date().toISOString()
+      });
+      
       // Call onBack with a small delay
       setTimeout(() => {
         onBack();
@@ -277,11 +321,17 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
         playSound('click');
         vibrate([50, 30, 50]);
         
+        // Update user progress
+        updateUserProgress({
+          name: nameInput.trim(),
+          lastActive: new Date().toISOString()
+        });
+        
         // Award XP for setting name
-        const currentXp = parseInt(localStorage.getItem('neuropul_xp') || '0');
-        const newXp = currentXp + 5;
-        localStorage.setItem('neuropul_xp', newXp.toString());
-        setXp(newXp);
+        const newXp = addUserXP(5);
+        if (newXp) {
+          setXp(newXp.xp);
+        }
       }
     } catch (error) {
       console.error('Error in handleNameSubmit:', error);

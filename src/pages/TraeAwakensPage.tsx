@@ -4,6 +4,7 @@ import ResponseLostSoul from '../components/ResponseLostSoul';
 import ResponseAwakening from '../components/ResponseAwakening';
 import ResponseHackerReady from '../components/ResponseHackerReady';
 import { AnimatePresence, motion } from 'framer-motion';
+import { saveUserProgress, loadUserProgress, updateUserProgress } from '../utils/progressUtils';
 
 type Screen = 'intro' | 'lost' | 'awakening' | 'ready' | 'portal';
 
@@ -72,6 +73,23 @@ const TraeAwakensPage: React.FC = () => {
       localStorage.setItem('neuropul_is_paid', 'false');
     }
     
+    // Load or initialize user progress
+    const existingProgress = loadUserProgress();
+    if (!existingProgress) {
+      saveUserProgress({
+        name: '',
+        archetype: null,
+        avatarUrl: '',
+        xp: 0,
+        level: 1,
+        prophecy: '',
+        awakened: false,
+        createdAt: new Date().toISOString(),
+        lastActive: new Date().toISOString(),
+        questStep: 0
+      });
+    }
+    
     // Cleanup function
     return () => {
       if (inactivityTimerRef.current) {
@@ -102,6 +120,13 @@ const TraeAwakensPage: React.FC = () => {
     // Set level_selected flag
     localStorage.setItem('neuropul_level_selected', 'true');
     
+    // Update user progress
+    updateUserProgress({
+      userPath: path,
+      questStep: 1,
+      lastActive: new Date().toISOString()
+    });
+    
     // Reset navigation lock after a short delay
     setTimeout(() => {
       isNavigatingRef.current = false;
@@ -119,6 +144,12 @@ const TraeAwakensPage: React.FC = () => {
     
     // Log navigation
     console.log('User navigated back to intro');
+    
+    // Update user progress
+    updateUserProgress({
+      questStep: 0,
+      lastActive: new Date().toISOString()
+    });
     
     // Reset navigation lock after a short delay
     setTimeout(() => {
@@ -142,6 +173,12 @@ const TraeAwakensPage: React.FC = () => {
     // Set completion flag
     localStorage.setItem('neuropul_intro_completed', 'true');
     localStorage.setItem('neuropul_intro_completed_at', new Date().toISOString());
+    
+    // Update user progress
+    updateUserProgress({
+      questStep: 2,
+      lastActive: new Date().toISOString()
+    });
     
     // Check if this is the third message viewed (for CTA trigger)
     const messagesViewed = parseInt(localStorage.getItem('neuropul_viewed_messages') || '0');

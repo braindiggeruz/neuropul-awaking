@@ -5,6 +5,7 @@ import { logError } from '../lib/utils/errorLogger';
 import { getUserLanguage, setUserLanguage, translate } from '../lib/utils/i18n';
 import LanguageSwitcher from './LanguageSwitcher';
 import { playSound, vibrate, cleanupAudio } from '../utils/audioUtils';
+import { saveUserProgress, loadUserProgress, updateUserProgress } from '../utils/progressUtils';
 
 interface TraeAwakensProps {
   onPathSelect: (path: 'lost' | 'awakening' | 'ready') => void;
@@ -207,9 +208,35 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
       // Save user path to localStorage for future reference
       localStorage.setItem('neuropul_user_path', path);
       localStorage.setItem('neuropul_first_visit_date', new Date().toISOString());
+      localStorage.setItem('neuropul_current_screen', path);
       
       // Set user path in state
       setUserPath(path);
+      
+      // Initialize or update user progress
+      const existingProgress = loadUserProgress();
+      if (existingProgress) {
+        updateUserProgress({
+          questStep: 1,
+          lastActive: new Date().toISOString(),
+          userPath: path
+        });
+      } else {
+        // Create initial progress
+        saveUserProgress({
+          name: '',
+          archetype: null,
+          avatarUrl: '',
+          xp: 0,
+          level: 1,
+          prophecy: '',
+          awakened: false,
+          createdAt: new Date().toISOString(),
+          lastActive: new Date().toISOString(),
+          userPath: path,
+          questStep: 1
+        });
+      }
       
       // Play sound and vibrate
       playSound('click', true);
@@ -269,9 +296,32 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
         // Save user input for context
         localStorage.setItem('neuropul_user_input', userInput);
         localStorage.setItem('neuropul_user_path', detectedPath);
+        localStorage.setItem('neuropul_current_screen', detectedPath);
         
-        // Handle the detected path
-        console.log(`Detected path from input: ${detectedPath}`);
+        // Initialize or update user progress
+        const existingProgress = loadUserProgress();
+        if (existingProgress) {
+          updateUserProgress({
+            questStep: 1,
+            lastActive: new Date().toISOString(),
+            userPath: detectedPath
+          });
+        } else {
+          // Create initial progress
+          saveUserProgress({
+            name: '',
+            archetype: null,
+            avatarUrl: '',
+            xp: 0,
+            level: 1,
+            prophecy: '',
+            awakened: false,
+            createdAt: new Date().toISOString(),
+            lastActive: new Date().toISOString(),
+            userPath: detectedPath,
+            questStep: 1
+          });
+        }
         
         // Play sound and vibrate
         playSound('click', true);
@@ -481,6 +531,8 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
                       className="w-full p-4 bg-gray-800 hover:bg-gray-700 border border-gray-700 hover:border-purple-500 rounded-xl transition-all duration-300 flex items-center space-x-3 group relative overflow-hidden"
                       aria-label={language === 'ru' ? 'Я потерян' : 'Men yo\'qolganman'}
                       disabled={isNavigating}
+                      id="lost-soul-button"
+                      data-testid="lost-soul-button"
                     >
                       {/* Hover effect */}
                       <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-blue-600 opacity-0 group-hover:opacity-10 transition-opacity"></div>
@@ -540,6 +592,8 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
                       className="w-full p-4 bg-gray-800 hover:bg-gray-700 border border-gray-700 hover:border-purple-500 rounded-xl transition-all duration-300 flex items-center space-x-3 group relative overflow-hidden"
                       aria-label={language === 'ru' ? 'Я уже в теме' : 'Men allaqachon bilaman'}
                       disabled={isNavigating}
+                      id="ready-button"
+                      data-testid="ready-button"
                     >
                       {/* Hover effect */}
                       <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-blue-600 opacity-0 group-hover:opacity-10 transition-opacity"></div>

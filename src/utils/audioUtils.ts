@@ -3,6 +3,9 @@ import { logError } from '../lib/utils/errorLogger';
 // Audio context instance (created lazily)
 let audioContext: AudioContext | null = null;
 
+// Active audio nodes for cleanup
+const activeNodes: { oscillator: OscillatorNode, gain: GainNode }[] = [];
+
 // Initialize audio context
 const getAudioContext = (): AudioContext | null => {
   try {
@@ -53,6 +56,9 @@ export const playSound = (
     
     oscillator.connect(gainNode);
     gainNode.connect(context.destination);
+    
+    // Track active nodes for cleanup
+    activeNodes.push({ oscillator, gain: gainNode });
     
     switch (type) {
       case 'click':
@@ -123,6 +129,14 @@ export const playSound = (
         oscillator.stop(context.currentTime + 0.3);
         break;
     }
+    
+    // Remove from active nodes when done
+    oscillator.onended = () => {
+      const index = activeNodes.findIndex(node => node.oscillator === oscillator);
+      if (index !== -1) {
+        activeNodes.splice(index, 1);
+      }
+    };
   } catch (error) {
     console.error('Error playing sound:', error);
     logError(error, {
@@ -176,9 +190,36 @@ export const isVibrationSupported = (): boolean => {
  * Clean up audio resources
  */
 export const cleanupAudio = (): void => {
-  if (audioContext) {
-    audioContext.close();
-    audioContext = null;
-    console.log('Audio context closed');
+  try {
+    // Stop all active oscillators
+    activeNodes.forEach(node => {
+      try {
+        if (node.oscillator.frequency) {
+          node.oscillator.stop();
+        }
+        node.gain.disconnect();
+      } catch (e) {
+        // Ignore errors during cleanup
+      }
+    });
+    
+    // Clear the array
+    activeNodes.length = 0;
+    
+    // Close audio context if it exists
+    if (audioContext) {
+      audioContext.close().then(() => {
+        audioContext = null;
+        console.log('Audio context closed');
+      }).catch(err => {
+        console.error('Error closing audio context:', err);
+      });
+    }
+  } catch (error) {
+    console.error('Error cleaning up audio resources:', error);
+    logError(error, {
+      component: 'audioUtils',
+      action: 'cleanupAudio'
+    });
   }
 };

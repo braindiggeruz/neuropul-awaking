@@ -41,6 +41,7 @@ export default defineConfig(({ mode }) => {
             react: ['react', 'react-dom'],
             framer: ['framer-motion'],
             supabase: ['@supabase/supabase-js'],
+            router: ['react-router-dom'],
           },
         },
       },

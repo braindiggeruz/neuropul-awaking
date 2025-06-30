@@ -7,21 +7,14 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-# Dependencies
 node_modules
-.pnp
-.pnp.js
-
-# Build
 dist
 dist-ssr
 *.local
-build
 
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
-!.vscode/settings.json
 .idea
 .DS_Store
 *.suo
@@ -35,21 +28,22 @@ build
 .env.*
 !.env.example
 
-# Testing
+# Build files
+/build
+/dist
+
+# Deployment files
+.netlify
+.vercel
+
+# Cache
+.cache
+.parcel-cache
+
+# Coverage
 coverage
 .nyc_output
 
-# Deployment
-.netlify
-.vercel
-.firebase
-firebase-debug.log*
-
-# Misc
-.cache
-.temp
+# Temporary files
 .tmp
-.turbo
-.next
-out
-storybook-static
+.temp

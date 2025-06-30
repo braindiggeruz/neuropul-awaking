@@ -4,6 +4,7 @@ import ResponseLostSoul from '../components/ResponseLostSoul';
 import ResponseAwakening from '../components/ResponseAwakening';
 import ResponseHackerReady from '../components/ResponseHackerReady';
 import { AnimatePresence, motion } from 'framer-motion';
+import { getUserLanguage, setUserLanguage } from '../lib/utils/i18n';
 
 type Screen = 'intro' | 'lost' | 'awakening' | 'ready' | 'portal';
 
@@ -12,20 +13,17 @@ const TraeAwakensPage: React.FC = () => {
   const [userPath, setUserPath] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<string>('');
   const [viewCount, setViewCount] = useState(0);
-  const [language, setLanguage] = useState<'ru' | 'uz'>('ru');
+  const [language, setLanguage] = useState(getUserLanguage());
 
   // Initialize session and tracking
   useEffect(() => {
-    // Detect language preference
-    const storedLanguage = localStorage.getItem('neuropul_language');
-    const detectedLanguage = storedLanguage || 
-                            navigator.language.startsWith('uz') ? 'uz' : 
-                            navigator.language.startsWith('ru') ? 'ru' : 'ru';
+    // Set language from localStorage or URL parameter
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlLang = urlParams.get('lang');
     
-    setLanguage(detectedLanguage as 'ru' | 'uz');
-    
-    if (!storedLanguage) {
-      localStorage.setItem('neuropul_language', detectedLanguage);
+    if (urlLang === 'uz' || urlLang === 'ru') {
+      setLanguage(urlLang);
+      setUserLanguage(urlLang);
     }
     
     // Generate session ID if not exists
@@ -71,6 +69,11 @@ const TraeAwakensPage: React.FC = () => {
     if (!localStorage.getItem('neuropul_is_paid')) {
       localStorage.setItem('neuropul_is_paid', 'false');
     }
+    
+    // Initialize language if not exists
+    if (!localStorage.getItem('neuropul_language')) {
+      localStorage.setItem('neuropul_language', language);
+    }
   }, []);
 
   const handlePathSelect = (path: 'lost' | 'awakening' | 'ready') => {
@@ -81,7 +84,6 @@ const TraeAwakensPage: React.FC = () => {
     console.log(`User selected path: ${path}`);
     console.log(`Session ID: ${sessionId}`);
     console.log(`View count: ${viewCount}`);
-    console.log(`Language: ${language}`);
     
     // Track path selection
     localStorage.setItem('neuropul_user_path', path);
@@ -170,7 +172,7 @@ const TraeAwakensPage: React.FC = () => {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <TraeAwakens onPathSelect={handlePathSelect} language={language} />
+            <TraeAwakens onPathSelect={handlePathSelect} />
           </motion.div>
         )}
         
@@ -182,7 +184,7 @@ const TraeAwakensPage: React.FC = () => {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <ResponseLostSoul onContinue={handleContinueToPortal} onBack={handleBack} language={language} />
+            <ResponseLostSoul onContinue={handleContinueToPortal} onBack={handleBack} />
           </motion.div>
         )}
         
@@ -194,7 +196,7 @@ const TraeAwakensPage: React.FC = () => {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <ResponseAwakening onContinue={handleContinueToPortal} onBack={handleBack} language={language} />
+            <ResponseAwakening onContinue={handleContinueToPortal} onBack={handleBack} />
           </motion.div>
         )}
         
@@ -206,7 +208,7 @@ const TraeAwakensPage: React.FC = () => {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <ResponseHackerReady onContinue={handleContinueToPortal} onBack={handleBack} language={language} />
+            <ResponseHackerReady onContinue={handleContinueToPortal} onBack={handleBack} />
           </motion.div>
         )}
         
@@ -222,7 +224,9 @@ const TraeAwakensPage: React.FC = () => {
             <div className="text-center">
               <div className="w-16 h-16 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
               <p className="text-white text-lg">
-                {language === 'ru' ? 'Переход к порталу пробуждения...' : 'Uyg\'onish portaliga o\'tish...'}
+                {language === 'ru' 
+                  ? 'Переход к порталу пробуждения...' 
+                  : 'Uyg\'onish portaliga o\'tish...'}
               </p>
             </div>
           </motion.div>

@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Brain, ArrowRight, Code, Zap, Terminal, Lock } from 'lucide-react';
+import { getUserLanguage } from '../lib/utils/i18n';
+import LanguageSwitcher from './LanguageSwitcher';
 
 interface ResponseHackerReadyProps {
   onContinue: () => void;
   onBack: () => void;
-  language?: 'ru' | 'uz';
 }
 
-const ResponseHackerReady: React.FC<ResponseHackerReadyProps> = ({ onContinue, onBack, language = 'ru' }) => {
+const ResponseHackerReady: React.FC<ResponseHackerReadyProps> = ({ onContinue, onBack }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [message, setMessage] = useState('');
   const [isTyping, setIsTyping] = useState(true);
@@ -16,11 +17,14 @@ const ResponseHackerReady: React.FC<ResponseHackerReadyProps> = ({ onContinue, o
   const [userName, setUserName] = useState('');
   const [xp, setXp] = useState(0);
   const [isPaid, setIsPaid] = useState(false);
+  const [language, setLanguage] = useState(getUserLanguage());
 
-  // Trae's response to those who are already familiar with AI based on language
-  const traeMessage = language === 'ru'
-    ? "Вот это я понимаю. Хакер в доме.\n\nРаз ты уже в теме, давай без лишних слов. У меня есть набор продвинутых AI-инструментов, которые выведут твои навыки на новый уровень.\n\nМы определим твой архетип, чтобы персонализировать опыт. Затем ты получишь доступ к генераторам идей, кода, контента и многому другому.\n\nПлюс, тут есть система XP и уровней. Каждое использование AI приносит опыт и разблокирует новые возможности."
-    : "Mana buni tushunaman. Xaker uyda.\n\nAgar siz allaqachon mavzuni bilsangiz, ortiqcha so'zlarsiz davom etamiz. Menda sizning ko'nikmalaringizni yangi darajaga ko'taradigan ilg'or AI vositalari to'plami bor.\n\nTajribani shaxsiylashtirish uchun arxetipingizni aniqlaymiz. Keyin siz g'oyalar, kod, kontent generatorlari va boshqa ko'p narsalarga kirish huquqini olasiz.\n\nBundan tashqari, bu yerda XP va darajalar tizimi mavjud. AI-dan har bir foydalanish tajriba keltiradi va yangi imkoniyatlarni ochadi.";
+  // Trae's response to those who are already familiar with AI
+  const getTraeMessage = () => {
+    return language === 'ru' 
+      ? "Вот это я понимаю. Хакер в доме.\n\nРаз ты уже в теме, давай без лишних слов. У меня есть набор продвинутых AI-инструментов, которые выведут твои навыки на новый уровень.\n\nМы определим твой архетип, чтобы персонализировать опыт. Затем ты получишь доступ к генераторам идей, кода, контента и многому другому.\n\nПлюс, тут есть система XP и уровней. Каждое использование AI приносит опыт и разблокирует новые возможности."
+      : "Mana buni tushunaman. Xaker uyda.\n\nAgar siz allaqachon mavzuni bilsangiz, ortiqcha so'zlarsiz davom etamiz. Menda sizning ko'nikmalaringizni yangi darajaga ko'taradigan ilg'or AI vositalari to'plami bor.\n\nTajribangizni shaxsiylashtirish uchun arxetipingizni aniqlaymiz. Keyin siz g'oyalar, kod, kontent generatorlari va boshqa ko'p narsalarga kirish huquqini olasiz.\n\nBundan tashqari, bu yerda XP va darajalar tizimi mavjud. AI-dan har bir foydalanish tajriba keltiradi va yangi imkoniyatlarni ochadi.";
+  };
 
   // Simulate typing effect
   useEffect(() => {
@@ -36,6 +40,7 @@ const ResponseHackerReady: React.FC<ResponseHackerReadyProps> = ({ onContinue, o
     const userPaid = localStorage.getItem('neuropul_is_paid') === 'true';
     setIsPaid(userPaid);
     
+    const traeMessage = getTraeMessage();
     let currentText = '';
     let currentIndex = 0;
     
@@ -66,7 +71,7 @@ const ResponseHackerReady: React.FC<ResponseHackerReadyProps> = ({ onContinue, o
     }, 20); // Typing speed
     
     return () => clearInterval(typingInterval);
-  }, [traeMessage]);
+  }, [language]);
 
   // Sound effects with more cyberpunk feel
   const playSound = (type: 'click' | 'hover' | 'xp') => {
@@ -165,80 +170,8 @@ const ResponseHackerReady: React.FC<ResponseHackerReadyProps> = ({ onContinue, o
     }
   };
 
-  // Translations
-  const translations = {
-    askName: {
-      ru: 'Как мне к тебе обращаться, хакер?',
-      uz: 'Sizga qanday murojaat qilishim mumkin, xaker?'
-    },
-    enterName: {
-      ru: 'Введи своё имя или хендл...',
-      uz: 'Ismingizni yoki taxallusingizni kiriting...'
-    },
-    save: {
-      ru: 'Сохранить',
-      uz: 'Saqlash'
-    },
-    back: {
-      ru: 'Назад',
-      uz: 'Orqaga'
-    },
-    goToTools: {
-      ru: 'Перейти к инструментам',
-      uz: 'Vositalarga o\'tish'
-    },
-    availableTools: {
-      ru: 'Доступные инструменты:',
-      uz: 'Mavjud vositalar:'
-    },
-    codeGenerator: {
-      ru: 'Генератор кода',
-      uz: 'Kod generatori'
-    },
-    codeGeneratorDesc: {
-      ru: 'Создавай код на любом языке программирования',
-      uz: 'Istalgan dasturlash tilida kod yarating'
-    },
-    mvpGenerator: {
-      ru: 'MVP-генератор',
-      uz: 'MVP-generator'
-    },
-    mvpGeneratorDesc: {
-      ru: 'Быстрое создание минимально жизнеспособного продукта',
-      uz: 'Minimal hayotiy mahsulotni tez yaratish'
-    },
-    proTool: {
-      ru: 'PRO инструмент',
-      uz: 'PRO vosita'
-    },
-    promptEngineer: {
-      ru: 'Промпт-инженер',
-      uz: 'Prompt-muhandis'
-    },
-    promptEngineerDesc: {
-      ru: 'Создание и оптимизация промптов для лучших результатов',
-      uz: 'Eng yaxshi natijalar uchun promptlarni yaratish va optimallashtirish'
-    },
-    aiAssistant: {
-      ru: 'AI-Помощник',
-      uz: 'AI-Yordamchi'
-    },
-    aiAssistantDesc: {
-      ru: 'Персональный помощник для решения любых задач',
-      uz: 'Har qanday vazifani hal qilish uchun shaxsiy yordamchi'
-    },
-    unlockFullPower: {
-      ru: 'Разблокируй полную мощь AI',
-      uz: 'AI-ning to\'liq quvvatini ochib bering'
-    },
-    exclusiveContent: {
-      ru: 'Доступ к премиум-челленджам и инструментам',
-      uz: 'Premium chellenjlar va vositalarga kirish'
-    },
-    learnMore: {
-      ru: 'Узнать больше',
-      uz: 'Ko\'proq bilish'
-    }
+  const handleLanguageChange = (newLanguage: 'ru' | 'uz') => {
+    setLanguage(newLanguage);
   };
 
   return (
@@ -287,6 +220,11 @@ const ResponseHackerReady: React.FC<ResponseHackerReadyProps> = ({ onContinue, o
         </div>
       </div>
       
+      {/* Language switcher */}
+      <div className="absolute top-4 right-4 z-20">
+        <LanguageSwitcher onLanguageChange={handleLanguageChange} />
+      </div>
+      
       <div className="relative z-10 max-w-3xl w-full">
         <AnimatePresence>
           {isVisible && (
@@ -306,7 +244,9 @@ const ResponseHackerReady: React.FC<ResponseHackerReadyProps> = ({ onContinue, o
                 </div>
                 <div>
                   <h2 className="text-2xl font-bold text-white font-['Orbitron',sans-serif]">Trae</h2>
-                  <p className="text-purple-300 text-sm">{language === 'ru' ? 'AI-Наставник' : 'AI-Murabbiy'}</p>
+                  <p className="text-purple-300 text-sm">
+                    {language === 'ru' ? 'AI-Наставник' : 'AI-Murabbiy'}
+                  </p>
                 </div>
                 
                 {/* XP indicator */}
@@ -344,9 +284,10 @@ const ResponseHackerReady: React.FC<ResponseHackerReadyProps> = ({ onContinue, o
                   <button
                     onClick={() => setShowNameInput(true)}
                     className="text-cyan-400 hover:text-cyan-300 transition-colors text-sm"
-                    aria-label={translations.askName[language]}
+                    aria-label={language === 'ru' ? 'Как мне к тебе обращаться, хакер?' : 'Sizga qanday murojaat qilishim kerak, xaker?'}
+                    role="button"
                   >
-                    {translations.askName[language]}
+                    {language === 'ru' ? 'Как мне к тебе обращаться, хакер?' : 'Sizga qanday murojaat qilishim kerak, xaker?'}
                   </button>
                 </motion.div>
               )}
@@ -361,18 +302,19 @@ const ResponseHackerReady: React.FC<ResponseHackerReadyProps> = ({ onContinue, o
                     type="text"
                     value={nameInput}
                     onChange={(e) => setNameInput(e.target.value)}
-                    placeholder={translations.enterName[language]}
+                    placeholder={language === 'ru' ? 'Введи своё имя или хендл...' : 'Ismingizni yoki taxallusingizni kiriting...'}
                     className="flex-1 bg-gray-800 border border-gray-700 focus:border-cyan-500 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none"
                     onKeyPress={(e) => e.key === 'Enter' && handleNameSubmit()}
                     autoFocus
-                    aria-label={translations.enterName[language]}
+                    aria-label={language === 'ru' ? 'Ваше имя или хендл' : 'Ismingiz yoki taxallusingiz'}
                   />
                   <button
                     onClick={handleNameSubmit}
                     className="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg transition-colors"
-                    aria-label={translations.save[language]}
+                    aria-label={language === 'ru' ? 'Сохранить' : 'Saqlash'}
+                    role="button"
                   >
-                    {translations.save[language]}
+                    {language === 'ru' ? 'Сохранить' : 'Saqlash'}
                   </button>
                 </motion.div>
               )}
@@ -388,7 +330,7 @@ const ResponseHackerReady: React.FC<ResponseHackerReadyProps> = ({ onContinue, o
                   >
                     <h3 className="text-cyan-400 font-semibold mb-4 flex items-center font-['Orbitron',sans-serif]">
                       <Terminal className="w-5 h-5 mr-2" />
-                      {translations.availableTools[language]}
+                      {language === 'ru' ? 'Доступные инструменты:' : 'Mavjud vositalar:'}
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <motion.div 
@@ -402,9 +344,15 @@ const ResponseHackerReady: React.FC<ResponseHackerReadyProps> = ({ onContinue, o
                         
                         <div className="flex items-center space-x-3 mb-2 relative z-10">
                           <Code className="w-5 h-5 text-green-400 group-hover:text-green-300 transition-colors" />
-                          <span className="text-white font-semibold">{translations.codeGenerator[language]}</span>
+                          <span className="text-white font-semibold">
+                            {language === 'ru' ? 'Генератор кода' : 'Kod generatori'}
+                          </span>
                         </div>
-                        <p className="text-gray-300 text-sm relative z-10">{translations.codeGeneratorDesc[language]}</p>
+                        <p className="text-gray-300 text-sm relative z-10">
+                          {language === 'ru' 
+                            ? 'Создавай код на любом языке программирования' 
+                            : 'Istalgan dasturlash tilida kod yarating'}
+                        </p>
                       </motion.div>
                       
                       <motion.div 
@@ -427,10 +375,16 @@ const ResponseHackerReady: React.FC<ResponseHackerReadyProps> = ({ onContinue, o
                         
                         <div className="flex items-center space-x-3 mb-2 relative z-10">
                           <Zap className="w-5 h-5 text-yellow-400 group-hover:text-yellow-300 transition-colors" />
-                          <span className="text-white font-semibold">{translations.mvpGenerator[language]}</span>
-                          {!isPaid && <span className="text-xs text-yellow-400">{translations.proTool[language]}</span>}
+                          <span className="text-white font-semibold">
+                            {language === 'ru' ? 'MVP-генератор' : 'MVP-generator'}
+                          </span>
+                          {!isPaid && <span className="text-xs text-yellow-400">PRO</span>}
                         </div>
-                        <p className="text-gray-300 text-sm relative z-10">{translations.mvpGeneratorDesc[language]}</p>
+                        <p className="text-gray-300 text-sm relative z-10">
+                          {language === 'ru' 
+                            ? 'Быстрое создание минимально жизнеспособного продукта' 
+                            : 'Minimal hayotiy mahsulotni tez yaratish'}
+                        </p>
                       </motion.div>
                       
                       <motion.div 
@@ -444,9 +398,15 @@ const ResponseHackerReady: React.FC<ResponseHackerReadyProps> = ({ onContinue, o
                         
                         <div className="flex items-center space-x-3 mb-2 relative z-10">
                           <Terminal className="w-5 h-5 text-purple-400 group-hover:text-purple-300 transition-colors" />
-                          <span className="text-white font-semibold">{translations.promptEngineer[language]}</span>
+                          <span className="text-white font-semibold">
+                            {language === 'ru' ? 'Промпт-инженер' : 'Prompt-muhandis'}
+                          </span>
                         </div>
-                        <p className="text-gray-300 text-sm relative z-10">{translations.promptEngineerDesc[language]}</p>
+                        <p className="text-gray-300 text-sm relative z-10">
+                          {language === 'ru' 
+                            ? 'Создание и оптимизация промптов для лучших результатов' 
+                            : 'Eng yaxshi natijalar uchun promptlarni yaratish va optimallashtirish'}
+                        </p>
                       </motion.div>
                       
                       <motion.div 
@@ -460,9 +420,15 @@ const ResponseHackerReady: React.FC<ResponseHackerReadyProps> = ({ onContinue, o
                         
                         <div className="flex items-center space-x-3 mb-2 relative z-10">
                           <Brain className="w-5 h-5 text-blue-400 group-hover:text-blue-300 transition-colors" />
-                          <span className="text-white font-semibold">{translations.aiAssistant[language]}</span>
+                          <span className="text-white font-semibold">
+                            {language === 'ru' ? 'AI-ассистент' : 'AI-yordamchi'}
+                          </span>
                         </div>
-                        <p className="text-gray-300 text-sm relative z-10">{translations.aiAssistantDesc[language]}</p>
+                        <p className="text-gray-300 text-sm relative z-10">
+                          {language === 'ru' 
+                            ? 'Персональный помощник для решения любых задач' 
+                            : 'Har qanday vazifani hal qilish uchun shaxsiy yordamchi'}
+                        </p>
                       </motion.div>
                     </div>
                   </motion.div>
@@ -501,26 +467,30 @@ const ResponseHackerReady: React.FC<ResponseHackerReadyProps> = ({ onContinue, o
                       onClick={handleBack}
                       onMouseEnter={() => playSound('hover')}
                       className="px-6 py-3 bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white rounded-lg transition-colors flex items-center justify-center space-x-2 border border-gray-700 hover:border-purple-500 group relative overflow-hidden"
-                      aria-label={translations.back[language]}
+                      aria-label={language === 'ru' ? 'Назад' : 'Orqaga'}
+                      role="button"
                     >
                       {/* Button hover effect */}
                       <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-blue-600 opacity-0 group-hover:opacity-10 transition-opacity"></div>
                       
                       <ArrowRight className="w-5 h-5 rotate-180" />
-                      <span>{translations.back[language]}</span>
+                      <span>{language === 'ru' ? 'Назад' : 'Orqaga'}</span>
                     </button>
                     
                     <button
                       onClick={handleContinue}
                       onMouseEnter={() => playSound('hover')}
                       className="flex-1 px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-lg transition-colors flex items-center justify-center space-x-2 relative overflow-hidden group"
-                      aria-label={translations.goToTools[language]}
+                      aria-label={language === 'ru' ? 'Перейти к инструментам' : 'Vositalarga o\'tish'}
+                      role="button"
                     >
                       {/* Button glow effect */}
                       <div className="absolute -inset-1 bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg blur opacity-30 group-hover:opacity-50 transition-opacity"></div>
                       <div className="relative z-10 flex items-center justify-center space-x-2">
                         <Terminal className="w-5 h-5" />
-                        <span>{translations.goToTools[language]}</span>
+                        <span>
+                          {language === 'ru' ? 'Перейти к инструментам' : 'Vositalarga o\'tish'}
+                        </span>
                         <ArrowRight className="w-5 h-5" />
                       </div>
                     </button>
@@ -541,8 +511,14 @@ const ResponseHackerReady: React.FC<ResponseHackerReadyProps> = ({ onContinue, o
                       <Lock className="w-5 h-5 text-yellow-400" />
                     </div>
                     <div>
-                      <h4 className="text-yellow-400 font-semibold mb-1">{translations.unlockFullPower[language]}</h4>
-                      <p className="text-yellow-200 text-sm mb-2">{translations.exclusiveContent[language]}</p>
+                      <h4 className="text-yellow-400 font-semibold mb-1">
+                        {language === 'ru' ? 'Разблокируй полную мощь AI' : 'AI-ning to\'liq kuchini ochib bering'}
+                      </h4>
+                      <p className="text-yellow-200 text-sm mb-2">
+                        {language === 'ru' 
+                          ? 'Получи доступ ко всем продвинутым инструментам и функциям' 
+                          : 'Barcha ilg\'or vositalar va funksiyalarga kirish huquqini oling'}
+                      </p>
                       <button
                         onClick={() => {
                           // Set flag for CTA view
@@ -551,10 +527,13 @@ const ResponseHackerReady: React.FC<ResponseHackerReadyProps> = ({ onContinue, o
                           handleContinue();
                         }}
                         className="text-sm bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-500 hover:to-orange-500 text-white px-4 py-2 rounded-lg transition-colors inline-flex items-center space-x-2"
-                        aria-label={translations.learnMore[language]}
+                        aria-label={language === 'ru' ? 'Узнать больше' : 'Ko\'proq bilish'}
+                        role="button"
                       >
                         <Zap className="w-4 h-4" />
-                        <span>{translations.learnMore[language]}</span>
+                        <span>
+                          {language === 'ru' ? 'Узнать больше' : 'Ko\'proq bilish'}
+                        </span>
                       </button>
                     </div>
                   </div>

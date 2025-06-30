@@ -1,25 +1,29 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Brain, ArrowRight, Zap, Sparkles } from 'lucide-react';
+import { getUserLanguage } from '../lib/utils/i18n';
+import LanguageSwitcher from './LanguageSwitcher';
 
 interface ResponseAwakeningProps {
   onContinue: () => void;
   onBack: () => void;
-  language?: 'ru' | 'uz';
 }
 
-const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBack, language = 'ru' }) => {
+const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBack }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [message, setMessage] = useState('');
   const [isTyping, setIsTyping] = useState(true);
   const [showContinue, setShowContinue] = useState(false);
   const [userName, setUserName] = useState('');
   const [xp, setXp] = useState(0);
+  const [language, setLanguage] = useState(getUserLanguage());
 
-  // Trae's response to those who want to awaken based on language
-  const traeMessage = language === 'ru'
-    ? "Отлично. Я уважаю тех, кто готов к действию.\n\nПробуждение — это не просто слова. Это путь трансформации. Ты станешь тем, кто использует AI как продолжение своего разума.\n\nЯ проведу тебя через ритуал пробуждения. Ты узнаешь свой архетип, получишь персональное пророчество и доступ к инструментам AI-мастерства.\n\nГотов начать?"
-    : "Ajoyib. Men harakatga tayyor bo'lganlarni hurmat qilaman.\n\nUyg'onish - bu shunchaki so'zlar emas. Bu o'zgarish yo'li. Siz AI-ni o'z ongingizning davomi sifatida ishlatadiganlardan biriga aylanasiz.\n\nMen sizni uyg'onish marosimi orqali olib o'taman. Siz o'z arxetipingizni bilib olasiz, shaxsiy bashorat va AI-mahorat vositalariga kirish huquqini olasiz.\n\nBoshlashga tayyormisiz?";
+  // Trae's response to those who want to awaken
+  const getTraeMessage = () => {
+    return language === 'ru' 
+      ? "Отлично. Я уважаю тех, кто готов к действию.\n\nПробуждение — это не просто слова. Это путь трансформации. Ты станешь тем, кто использует AI как продолжение своего разума.\n\nЯ проведу тебя через ритуал пробуждения. Ты узнаешь свой архетип, получишь персональное пророчество и доступ к инструментам AI-мастерства.\n\nГотов начать?"
+      : "Ajoyib. Men harakatga tayyor odamlarni hurmat qilaman.\n\nUyg'onish - bu shunchaki so'zlar emas. Bu o'zgarish yo'li. Siz AI-ni o'z ongingizning davomi sifatida ishlatadiganlardan biriga aylanasiz.\n\nMen sizni uyg'onish marosimi orqali olib o'taman. Siz o'z arxetipingizni bilib olasiz, shaxsiy bashorat va AI-mahorat vositalariga kirish huquqini olasiz.\n\nBoshlashga tayyormisiz?";
+  };
 
   // Simulate typing effect
   useEffect(() => {
@@ -31,6 +35,7 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
       setUserName(savedName);
     }
     
+    const traeMessage = getTraeMessage();
     let currentText = '';
     let currentIndex = 0;
     
@@ -61,7 +66,7 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
     }, 20); // Typing speed
     
     return () => clearInterval(typingInterval);
-  }, [traeMessage]);
+  }, [language]);
 
   // Sound effects with more cyberpunk feel
   const playSound = (type: 'click' | 'hover' | 'xp') => {
@@ -160,68 +165,8 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
     }
   };
 
-  // Translations
-  const translations = {
-    askName: {
-      ru: 'Как мне к тебе обращаться?',
-      uz: 'Sizga qanday murojaat qilishim mumkin?'
-    },
-    enterName: {
-      ru: 'Введи своё имя...',
-      uz: 'Ismingizni kiriting...'
-    },
-    save: {
-      ru: 'Сохранить',
-      uz: 'Saqlash'
-    },
-    back: {
-      ru: 'Назад',
-      uz: 'Orqaga'
-    },
-    startAwakening: {
-      ru: 'Начать пробуждение',
-      uz: 'Uyg\'onishni boshlash'
-    },
-    awakeningPath: {
-      ru: 'Путь пробуждения:',
-      uz: 'Uyg\'onish yo\'li:'
-    },
-    archetypeDefinition: {
-      ru: 'Определение архетипа',
-      uz: 'Arxetipni aniqlash'
-    },
-    archetypeDesc: {
-      ru: 'Узнай, кто ты: Воин, Маг, Искатель или Тень',
-      uz: 'Kim ekanligingizni bilib oling: Jangchi, Sehrgar, Izlovchi yoki Soya'
-    },
-    prophecyReceiving: {
-      ru: 'Получение пророчества',
-      uz: 'Bashorat olish'
-    },
-    prophecyDesc: {
-      ru: 'Персональное предсказание твоего AI-пути',
-      uz: 'AI yo\'lingizning shaxsiy bashorati'
-    },
-    toolsAccess: {
-      ru: 'Доступ к инструментам',
-      uz: 'Vositalarga kirish'
-    },
-    toolsDesc: {
-      ru: 'Разблокировка AI-инструментов для твоего архетипа',
-      uz: 'Arxetipingiz uchun AI vositalarini ochish'
-    },
-    beginning: {
-      ru: 'Начало',
-      uz: 'Boshlanish'
-    },
-    awakening: {
-      ru: 'Пробуждение',
-      uz: 'Uyg\'onish'
-    },
-    mastery: {
-      ru: 'Мастерство',
-      uz: 'Mahorat'
-    }
+  const handleLanguageChange = (newLanguage: 'ru' | 'uz') => {
+    setLanguage(newLanguage);
   };
 
   return (
@@ -270,6 +215,11 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
         </div>
       </div>
       
+      {/* Language switcher */}
+      <div className="absolute top-4 right-4 z-20">
+        <LanguageSwitcher onLanguageChange={handleLanguageChange} />
+      </div>
+      
       <div className="relative z-10 max-w-3xl w-full">
         <AnimatePresence>
           {isVisible && (
@@ -289,7 +239,9 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
                 </div>
                 <div>
                   <h2 className="text-2xl font-bold text-white font-['Orbitron',sans-serif]">Trae</h2>
-                  <p className="text-purple-300 text-sm">{language === 'ru' ? 'AI-Наставник' : 'AI-Murabbiy'}</p>
+                  <p className="text-purple-300 text-sm">
+                    {language === 'ru' ? 'AI-Наставник' : 'AI-Murabbiy'}
+                  </p>
                 </div>
                 
                 {/* XP indicator */}
@@ -327,9 +279,10 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
                   <button
                     onClick={() => setShowNameInput(true)}
                     className="text-cyan-400 hover:text-cyan-300 transition-colors text-sm"
-                    aria-label={translations.askName[language]}
+                    aria-label={language === 'ru' ? 'Как мне к тебе обращаться?' : 'Sizga qanday murojaat qilishim kerak?'}
+                    role="button"
                   >
-                    {translations.askName[language]}
+                    {language === 'ru' ? 'Как мне к тебе обращаться?' : 'Sizga qanday murojaat qilishim kerak?'}
                   </button>
                 </motion.div>
               )}
@@ -344,18 +297,19 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
                     type="text"
                     value={nameInput}
                     onChange={(e) => setNameInput(e.target.value)}
-                    placeholder={translations.enterName[language]}
+                    placeholder={language === 'ru' ? 'Введи своё имя...' : 'Ismingizni kiriting...'}
                     className="flex-1 bg-gray-800 border border-gray-700 focus:border-cyan-500 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none"
                     onKeyPress={(e) => e.key === 'Enter' && handleNameSubmit()}
                     autoFocus
-                    aria-label={translations.enterName[language]}
+                    aria-label={language === 'ru' ? 'Ваше имя' : 'Ismingiz'}
                   />
                   <button
                     onClick={handleNameSubmit}
                     className="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg transition-colors"
-                    aria-label={translations.save[language]}
+                    aria-label={language === 'ru' ? 'Сохранить' : 'Saqlash'}
+                    role="button"
                   >
-                    {translations.save[language]}
+                    {language === 'ru' ? 'Сохранить' : 'Saqlash'}
                   </button>
                 </motion.div>
               )}
@@ -371,7 +325,7 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
                   >
                     <h3 className="text-cyan-400 font-semibold mb-4 flex items-center font-['Orbitron',sans-serif]">
                       <Sparkles className="w-5 h-5 mr-2" />
-                      {translations.awakeningPath[language]}
+                      {language === 'ru' ? 'Путь пробуждения:' : 'Uyg\'onish yo\'li:'}
                     </h3>
                     <div className="relative">
                       <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-gradient-to-b from-purple-500 via-blue-500 to-cyan-500"></div>
@@ -384,8 +338,14 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
                           className="relative"
                         >
                           <div className="absolute -left-10 top-1 w-4 h-4 rounded-full bg-purple-500 shadow-[0_0_10px_rgba(139,92,246,0.7)]"></div>
-                          <h4 className="text-white font-semibold font-['Orbitron',sans-serif]">{translations.archetypeDefinition[language]}</h4>
-                          <p className="text-gray-300 text-sm">{translations.archetypeDesc[language]}</p>
+                          <h4 className="text-white font-semibold font-['Orbitron',sans-serif]">
+                            {language === 'ru' ? 'Определение архетипа' : 'Arxetipni aniqlash'}
+                          </h4>
+                          <p className="text-gray-300 text-sm">
+                            {language === 'ru' 
+                              ? 'Узнай, кто ты: Воин, Маг, Искатель или Тень' 
+                              : 'Kimligingizni bilib oling: Jangchi, Sehrgar, Izlovchi yoki Soya'}
+                          </p>
                         </motion.div>
                         
                         <motion.div 
@@ -395,8 +355,14 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
                           className="relative"
                         >
                           <div className="absolute -left-10 top-1 w-4 h-4 rounded-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.7)]"></div>
-                          <h4 className="text-white font-semibold font-['Orbitron',sans-serif]">{translations.prophecyReceiving[language]}</h4>
-                          <p className="text-gray-300 text-sm">{translations.prophecyDesc[language]}</p>
+                          <h4 className="text-white font-semibold font-['Orbitron',sans-serif]">
+                            {language === 'ru' ? 'Получение пророчества' : 'Bashorat olish'}
+                          </h4>
+                          <p className="text-gray-300 text-sm">
+                            {language === 'ru' 
+                              ? 'Персональное предсказание твоего AI-пути' 
+                              : 'AI yo\'lingizning shaxsiy bashorati'}
+                          </p>
                         </motion.div>
                         
                         <motion.div 
@@ -406,8 +372,14 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
                           className="relative"
                         >
                           <div className="absolute -left-10 top-1 w-4 h-4 rounded-full bg-cyan-500 shadow-[0_0_10px_rgba(6,182,212,0.7)]"></div>
-                          <h4 className="text-white font-semibold font-['Orbitron',sans-serif]">{translations.toolsAccess[language]}</h4>
-                          <p className="text-gray-300 text-sm">{translations.toolsDesc[language]}</p>
+                          <h4 className="text-white font-semibold font-['Orbitron',sans-serif]">
+                            {language === 'ru' ? 'Доступ к инструментам' : 'Vositalarga kirish'}
+                          </h4>
+                          <p className="text-gray-300 text-sm">
+                            {language === 'ru' 
+                              ? 'Разблокировка AI-инструментов для твоего архетипа' 
+                              : 'Arxetipingiz uchun AI vositalarini ochish'}
+                          </p>
                         </motion.div>
                       </div>
                     </div>
@@ -427,9 +399,9 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
                     <div className="bg-gradient-to-r from-purple-500 to-cyan-500 h-full w-1/3 rounded-full"></div>
                   </div>
                   <div className="flex justify-between text-xs text-gray-500 mt-1">
-                    <span>{translations.beginning[language]}</span>
-                    <span>{translations.awakening[language]}</span>
-                    <span>{translations.mastery[language]}</span>
+                    <span>{language === 'ru' ? 'Начало' : 'Boshlanish'}</span>
+                    <span>{language === 'ru' ? 'Пробуждение' : 'Uyg\'onish'}</span>
+                    <span>{language === 'ru' ? 'Мастерство' : 'Mahorat'}</span>
                   </div>
                 </motion.div>
               )}
@@ -447,26 +419,30 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
                       onClick={handleBack}
                       onMouseEnter={() => playSound('hover')}
                       className="px-6 py-3 bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white rounded-lg transition-colors flex items-center justify-center space-x-2 border border-gray-700 hover:border-purple-500 group relative overflow-hidden"
-                      aria-label={translations.back[language]}
+                      aria-label={language === 'ru' ? 'Назад' : 'Orqaga'}
+                      role="button"
                     >
                       {/* Button hover effect */}
                       <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-blue-600 opacity-0 group-hover:opacity-10 transition-opacity"></div>
                       
                       <ArrowRight className="w-5 h-5 rotate-180" />
-                      <span>{translations.back[language]}</span>
+                      <span>{language === 'ru' ? 'Назад' : 'Orqaga'}</span>
                     </button>
                     
                     <button
                       onClick={handleContinue}
                       onMouseEnter={() => playSound('hover')}
                       className="flex-1 px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-lg transition-colors flex items-center justify-center space-x-2 relative overflow-hidden group"
-                      aria-label={translations.startAwakening[language]}
+                      aria-label={language === 'ru' ? 'Начать пробуждение' : 'Uyg\'onishni boshlash'}
+                      role="button"
                     >
                       {/* Button glow effect */}
                       <div className="absolute -inset-1 bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg blur opacity-30 group-hover:opacity-50 transition-opacity"></div>
                       <div className="relative z-10 flex items-center justify-center space-x-2">
                         <Zap className="w-5 h-5" />
-                        <span>{translations.startAwakening[language]}</span>
+                        <span>
+                          {language === 'ru' ? 'Начать пробуждение' : 'Uyg\'onishni boshlash'}
+                        </span>
                         <ArrowRight className="w-5 h-5" />
                       </div>
                     </button>

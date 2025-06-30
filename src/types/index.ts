@@ -8,21 +8,21 @@ export interface UserProgress {
   awakened: boolean;
   createdAt: string;
   lastActive: string;
-  language?: 'ru' | 'uz';
   userName?: string; // For backward compatibility
-  dailyStreak?: number;
-  toolsUsed?: string[];
-  isPremium?: boolean;
-  premiumTier?: string;
-  questStep?: number;
+  language?: 'ru' | 'uz';
   soundEnabled?: boolean;
   vibrationEnabled?: boolean;
-  fomoStart?: string | null;
+  dailyStreak?: number;
+  lastVisit?: string;
+  toolsUsed?: string[];
+  isPremium?: boolean;
+  premiumTier?: 'none' | 'basic' | 'pro' | 'master';
   hasSeenFomo?: boolean;
+  fomoStart?: string | null;
+  questStep?: number;
   referralUsed?: boolean;
   dailyXPDate?: string;
   certificateIssued?: boolean;
-  lastVisit?: string;
   refCode?: string | null;
   version?: string;
 }
@@ -86,11 +86,11 @@ export interface AITool {
   description: { ru: string; uz: string };
   xpReward: number;
   isPremium: boolean;
-  premiumTier?: string;
+  premiumTier?: 'basic' | 'pro' | 'master';
 }
 
 export interface PremiumTier {
-  id: string;
+  id: 'basic' | 'pro' | 'master';
   name: { ru: string; uz: string };
   price: number;
   originalPrice: number;
@@ -103,7 +103,6 @@ export interface PremiumTier {
 }
 
 export interface Translations {
-  [key: string]: {
-    [key: string]: string | { [key: string]: string };
-  };
+  ru: Record<string, any>;
+  uz: Record<string, any>;
 }

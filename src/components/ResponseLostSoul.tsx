@@ -1,24 +1,28 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Brain, ArrowRight, HelpCircle, Zap, Lightbulb } from 'lucide-react';
+import { getUserLanguage } from '../lib/utils/i18n';
+import LanguageSwitcher from './LanguageSwitcher';
 
 interface ResponseLostSoulProps {
   onContinue: () => void;
   onBack: () => void;
-  language?: 'ru' | 'uz';
 }
 
-const ResponseLostSoul: React.FC<ResponseLostSoulProps> = ({ onContinue, onBack, language = 'ru' }) => {
+const ResponseLostSoul: React.FC<ResponseLostSoulProps> = ({ onContinue, onBack }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [message, setMessage] = useState('');
   const [isTyping, setIsTyping] = useState(true);
   const [showContinue, setShowContinue] = useState(false);
   const [userName, setUserName] = useState('');
+  const [language, setLanguage] = useState(getUserLanguage());
 
-  // Trae's response to lost souls based on language
-  const traeMessage = language === 'ru' 
-    ? "Не парься, бро. Все мы когда-то были потеряны. AI — это просто инструмент, как молоток или отвёртка, только для мозга.\n\nПредставь, что у тебя есть умный помощник, который может писать тексты, создавать картинки, анализировать данные и отвечать на вопросы. Это и есть AI.\n\nНе нужно быть программистом или гением. Просто скажи, что тебе нужно — и AI сделает это за тебя. Это как иметь суперсилу."
-    : "Xavotir olma, birodar. Hammamiz ham qachondir yo'qolganmiz. AI - bu shunchaki asbob, xuddi bolg'a yoki otvertka kabi, faqat miyangiz uchun.\n\nTasavvur qiling, sizda matnlarni yozadigan, rasmlar yaratadigan, ma'lumotlarni tahlil qiladigan va savollarga javob beradigan aqlli yordamchi bor. Bu AI.\n\nDasturchi yoki daho bo'lish shart emas. Shunchaki sizga nima kerakligini ayting - va AI buni siz uchun qiladi. Bu xuddi superkuchga ega bo'lish kabi.";
+  // Trae's response to lost souls
+  const getTraeMessage = () => {
+    return language === 'ru' 
+      ? "Не парься, бро. Все мы когда-то были потеряны. AI — это просто инструмент, как молоток или отвёртка, только для мозга.\n\nПредставь, что у тебя есть умный помощник, который может писать тексты, создавать картинки, анализировать данные и отвечать на вопросы. Это и есть AI.\n\nНе нужно быть программистом или гением. Просто скажи, что тебе нужно — и AI сделает это за тебя. Это как иметь суперсилу."
+      : "Xavotir olma, birodar. Hammamiz ham qachondir yo'qolgan edik. AI - bu shunchaki asbob, bolg'a yoki otvertka kabi, faqat miyangiz uchun.\n\nTasavvur qiling, sizda matnlarni yozadigan, rasmlar yaratadigan, ma'lumotlarni tahlil qiladigan va savollarga javob beradigan aqlli yordamchi bor. Bu AI.\n\nDasturchi yoki daho bo'lish shart emas. Shunchaki sizga nima kerakligini ayting - va AI buni siz uchun qiladi. Bu xuddi superkuchga ega bo'lish kabi.";
+  };
 
   // Simulate typing effect
   useEffect(() => {
@@ -30,6 +34,7 @@ const ResponseLostSoul: React.FC<ResponseLostSoulProps> = ({ onContinue, onBack,
       setUserName(savedName);
     }
     
+    const traeMessage = getTraeMessage();
     let currentText = '';
     let currentIndex = 0;
     
@@ -50,7 +55,7 @@ const ResponseLostSoul: React.FC<ResponseLostSoulProps> = ({ onContinue, onBack,
     }, 20); // Typing speed
     
     return () => clearInterval(typingInterval);
-  }, [traeMessage]);
+  }, [language]);
 
   // Sound effects with more cyberpunk feel
   const playSound = (type: 'click' | 'hover') => {
@@ -130,68 +135,8 @@ const ResponseLostSoul: React.FC<ResponseLostSoulProps> = ({ onContinue, onBack,
     }
   };
 
-  // Translations
-  const translations = {
-    askName: {
-      ru: 'Кстати, как тебя зовут?',
-      uz: 'Aytgancha, ismingiz nima?'
-    },
-    enterName: {
-      ru: 'Введи своё имя...',
-      uz: 'Ismingizni kiriting...'
-    },
-    save: {
-      ru: 'Сохранить',
-      uz: 'Saqlash'
-    },
-    back: {
-      ru: 'Назад',
-      uz: 'Orqaga'
-    },
-    continue: {
-      ru: 'Хочу пробудиться',
-      uz: 'Uyg\'onishni xohlayman'
-    },
-    learnMore: {
-      ru: 'Узнать больше про AI',
-      uz: 'AI haqida ko\'proq bilish'
-    },
-    aiHelp: {
-      ru: 'Что AI может сделать для тебя:',
-      uz: 'AI siz uchun nima qila oladi:'
-    },
-    saveTime: {
-      ru: 'Сэкономить время',
-      uz: 'Vaqtni tejash'
-    },
-    saveTimeDesc: {
-      ru: 'Автоматизируй рутинные задачи и сосредоточься на важном',
-      uz: 'Kundalik vazifalarni avtomatlashtiring va muhim narsalarga e\'tibor bering'
-    },
-    generateIdeas: {
-      ru: 'Генерировать идеи',
-      uz: 'G\'oyalarni yaratish'
-    },
-    generateIdeasDesc: {
-      ru: 'Получай свежие идеи для бизнеса, контента или творчества',
-      uz: 'Biznes, kontent yoki ijod uchun yangi g\'oyalar oling'
-    },
-    createContent: {
-      ru: 'Создавать контент',
-      uz: 'Kontent yaratish'
-    },
-    createContentDesc: {
-      ru: 'Тексты, изображения, код — всё за считанные секунды',
-      uz: 'Matnlar, rasmlar, kod - hammasi soniyalar ichida'
-    },
-    learnFaster: {
-      ru: 'Учиться быстрее',
-      uz: 'Tezroq o\'rganish'
-    },
-    learnFasterDesc: {
-      ru: 'Получай объяснения сложных тем простым языком',
-      uz: 'Murakkab mavzularni oddiy tilda tushuntirishlar oling'
-    }
+  const handleLanguageChange = (newLanguage: 'ru' | 'uz') => {
+    setLanguage(newLanguage);
   };
 
   return (
@@ -234,6 +179,11 @@ const ResponseLostSoul: React.FC<ResponseLostSoulProps> = ({ onContinue, onBack,
         <div className="absolute inset-0 bg-scanline opacity-5 pointer-events-none"></div>
       </div>
       
+      {/* Language switcher */}
+      <div className="absolute top-4 right-4 z-20">
+        <LanguageSwitcher onLanguageChange={handleLanguageChange} />
+      </div>
+      
       <div className="relative z-10 max-w-3xl w-full">
         <AnimatePresence>
           {isVisible && (
@@ -253,7 +203,9 @@ const ResponseLostSoul: React.FC<ResponseLostSoulProps> = ({ onContinue, onBack,
                 </div>
                 <div>
                   <h2 className="text-2xl font-bold text-white font-['Orbitron',sans-serif]">Trae</h2>
-                  <p className="text-purple-300 text-sm">{language === 'ru' ? 'AI-Наставник' : 'AI-Murabbiy'}</p>
+                  <p className="text-purple-300 text-sm">
+                    {language === 'ru' ? 'AI-Наставник' : 'AI-Murabbiy'}
+                  </p>
                 </div>
                 
                 {/* Connection status indicator */}
@@ -289,9 +241,10 @@ const ResponseLostSoul: React.FC<ResponseLostSoulProps> = ({ onContinue, onBack,
                   <button
                     onClick={() => setShowNameInput(true)}
                     className="text-cyan-400 hover:text-cyan-300 transition-colors text-sm"
-                    aria-label={translations.askName[language]}
+                    aria-label={language === 'ru' ? 'Кстати, как тебя зовут?' : 'Aytgancha, ismingiz nima?'}
+                    role="button"
                   >
-                    {translations.askName[language]}
+                    {language === 'ru' ? 'Кстати, как тебя зовут?' : 'Aytgancha, ismingiz nima?'}
                   </button>
                 </motion.div>
               )}
@@ -306,18 +259,19 @@ const ResponseLostSoul: React.FC<ResponseLostSoulProps> = ({ onContinue, onBack,
                     type="text"
                     value={nameInput}
                     onChange={(e) => setNameInput(e.target.value)}
-                    placeholder={translations.enterName[language]}
+                    placeholder={language === 'ru' ? 'Введи своё имя...' : 'Ismingizni kiriting...'}
                     className="flex-1 bg-gray-800 border border-gray-700 focus:border-cyan-500 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none"
                     onKeyPress={(e) => e.key === 'Enter' && handleNameSubmit()}
                     autoFocus
-                    aria-label={translations.enterName[language]}
+                    aria-label={language === 'ru' ? 'Ваше имя' : 'Ismingiz'}
                   />
                   <button
                     onClick={handleNameSubmit}
                     className="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg transition-colors"
-                    aria-label={translations.save[language]}
+                    aria-label={language === 'ru' ? 'Сохранить' : 'Saqlash'}
+                    role="button"
                   >
-                    {translations.save[language]}
+                    {language === 'ru' ? 'Сохранить' : 'Saqlash'}
                   </button>
                 </motion.div>
               )}
@@ -333,7 +287,7 @@ const ResponseLostSoul: React.FC<ResponseLostSoulProps> = ({ onContinue, onBack,
                   >
                     <h3 className="text-cyan-400 font-semibold mb-4 flex items-center font-['Orbitron',sans-serif]">
                       <Lightbulb className="w-5 h-5 mr-2" />
-                      {translations.aiHelp[language]}
+                      {language === 'ru' ? 'Что AI может сделать для тебя:' : 'AI siz uchun nima qila oladi:'}
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <motion.div 
@@ -344,9 +298,15 @@ const ResponseLostSoul: React.FC<ResponseLostSoulProps> = ({ onContinue, onBack,
                       >
                         <div className="flex items-center space-x-3 mb-2">
                           <Zap className="w-5 h-5 text-yellow-400 group-hover:text-yellow-300 transition-colors" />
-                          <span className="text-white font-semibold">{translations.saveTime[language]}</span>
+                          <span className="text-white font-semibold">
+                            {language === 'ru' ? 'Сэкономить время' : 'Vaqtni tejash'}
+                          </span>
                         </div>
-                        <p className="text-gray-300 text-sm">{translations.saveTimeDesc[language]}</p>
+                        <p className="text-gray-300 text-sm">
+                          {language === 'ru' 
+                            ? 'Автоматизируй рутинные задачи и сосредоточься на важном' 
+                            : 'Kundalik vazifalarni avtomatlashtiring va muhim narsalarga e\'tibor bering'}
+                        </p>
                       </motion.div>
                       <motion.div 
                         initial={{ opacity: 0, x: -20 }}
@@ -356,9 +316,15 @@ const ResponseLostSoul: React.FC<ResponseLostSoulProps> = ({ onContinue, onBack,
                       >
                         <div className="flex items-center space-x-3 mb-2">
                           <Zap className="w-5 h-5 text-yellow-400 group-hover:text-yellow-300 transition-colors" />
-                          <span className="text-white font-semibold">{translations.generateIdeas[language]}</span>
+                          <span className="text-white font-semibold">
+                            {language === 'ru' ? 'Генерировать идеи' : 'G\'oyalar yaratish'}
+                          </span>
                         </div>
-                        <p className="text-gray-300 text-sm">{translations.generateIdeasDesc[language]}</p>
+                        <p className="text-gray-300 text-sm">
+                          {language === 'ru' 
+                            ? 'Получай свежие идеи для бизнеса, контента или творчества' 
+                            : 'Biznes, kontent yoki ijod uchun yangi g\'oyalar oling'}
+                        </p>
                       </motion.div>
                       <motion.div 
                         initial={{ opacity: 0, x: -20 }}
@@ -368,9 +334,15 @@ const ResponseLostSoul: React.FC<ResponseLostSoulProps> = ({ onContinue, onBack,
                       >
                         <div className="flex items-center space-x-3 mb-2">
                           <Zap className="w-5 h-5 text-yellow-400 group-hover:text-yellow-300 transition-colors" />
-                          <span className="text-white font-semibold">{translations.createContent[language]}</span>
+                          <span className="text-white font-semibold">
+                            {language === 'ru' ? 'Создавать контент' : 'Kontent yaratish'}
+                          </span>
                         </div>
-                        <p className="text-gray-300 text-sm">{translations.createContentDesc[language]}</p>
+                        <p className="text-gray-300 text-sm">
+                          {language === 'ru' 
+                            ? 'Тексты, изображения, код — всё за считанные секунды' 
+                            : 'Matnlar, rasmlar, kod - hammasi soniyalar ichida'}
+                        </p>
                       </motion.div>
                       <motion.div 
                         initial={{ opacity: 0, x: -20 }}
@@ -380,9 +352,15 @@ const ResponseLostSoul: React.FC<ResponseLostSoulProps> = ({ onContinue, onBack,
                       >
                         <div className="flex items-center space-x-3 mb-2">
                           <Zap className="w-5 h-5 text-yellow-400 group-hover:text-yellow-300 transition-colors" />
-                          <span className="text-white font-semibold">{translations.learnFaster[language]}</span>
+                          <span className="text-white font-semibold">
+                            {language === 'ru' ? 'Учиться быстрее' : 'Tezroq o\'rganish'}
+                          </span>
                         </div>
-                        <p className="text-gray-300 text-sm">{translations.learnFasterDesc[language]}</p>
+                        <p className="text-gray-300 text-sm">
+                          {language === 'ru' 
+                            ? 'Получай объяснения сложных тем простым языком' 
+                            : 'Murakkab mavzularni oddiy tilda tushuntirishlar oling'}
+                        </p>
                       </motion.div>
                     </div>
                   </motion.div>
@@ -421,25 +399,29 @@ const ResponseLostSoul: React.FC<ResponseLostSoulProps> = ({ onContinue, onBack,
                       onClick={handleBack}
                       onMouseEnter={() => playSound('hover')}
                       className="px-6 py-3 bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white rounded-lg transition-colors flex items-center justify-center space-x-2 border border-gray-700 hover:border-purple-500 group relative overflow-hidden"
-                      aria-label={translations.back[language]}
+                      aria-label={language === 'ru' ? 'Назад' : 'Orqaga'}
+                      role="button"
                     >
                       {/* Button hover effect */}
                       <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-blue-600 opacity-0 group-hover:opacity-10 transition-opacity"></div>
                       
                       <ArrowRight className="w-5 h-5 rotate-180" />
-                      <span>{translations.back[language]}</span>
+                      <span>{language === 'ru' ? 'Назад' : 'Orqaga'}</span>
                     </button>
                     
                     <button
                       onClick={handleContinue}
                       onMouseEnter={() => playSound('hover')}
                       className="flex-1 px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-lg transition-colors flex items-center justify-center space-x-2 relative overflow-hidden group"
-                      aria-label={translations.continue[language]}
+                      aria-label={language === 'ru' ? 'Хочу пробудиться' : 'Uyg\'onishni xohlayman'}
+                      role="button"
                     >
                       {/* Button glow effect */}
                       <div className="absolute -inset-1 bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg blur opacity-30 group-hover:opacity-50 transition-opacity"></div>
                       <div className="relative z-10 flex items-center justify-center space-x-2">
-                        <span>{translations.continue[language]}</span>
+                        <span>
+                          {language === 'ru' ? 'Хочу пробудиться' : 'Uyg\'onishni xohlayman'}
+                        </span>
                         <ArrowRight className="w-5 h-5" />
                       </div>
                     </button>
@@ -448,13 +430,17 @@ const ResponseLostSoul: React.FC<ResponseLostSoulProps> = ({ onContinue, onBack,
                       onClick={() => window.open('https://chat.openai.com', '_blank')}
                       onMouseEnter={() => playSound('hover')}
                       className="px-6 py-3 bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white rounded-lg transition-colors flex items-center justify-center space-x-2 border border-gray-700 hover:border-purple-500 group relative overflow-hidden"
-                      aria-label={translations.learnMore[language]}
+                      aria-label={language === 'ru' ? 'Узнать больше про AI' : 'AI haqida ko\'proq bilish'}
+                      role="button"
+                      rel="noopener noreferrer"
                     >
                       {/* Button hover effect */}
                       <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-blue-600 opacity-0 group-hover:opacity-10 transition-opacity"></div>
                       
                       <HelpCircle className="w-5 h-5" />
-                      <span>{translations.learnMore[language]}</span>
+                      <span>
+                        {language === 'ru' ? 'Узнать больше про AI' : 'AI haqida ko\'proq bilish'}
+                      </span>
                     </button>
                   </motion.div>
                 )}

@@ -7,7 +7,17 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   
   return {
-    plugins: [react()],
+    plugins: [react({
+      // Enable React Router v7 future flags
+      babel: {
+        plugins: [
+          ['module:@babel/plugin-transform-react-jsx', {
+            runtime: 'automatic',
+            importSource: 'react'
+          }]
+        ]
+      }
+    })],
     optimizeDeps: {
       exclude: ['lucide-react'],
     },
@@ -18,6 +28,7 @@ export default defineConfig(({ mode }) => {
           changeOrigin: true,
         },
       },
+      hmr: mode === 'production' ? false : true,
     },
     define: {
       // Make env variables available to the client
@@ -25,6 +36,11 @@ export default defineConfig(({ mode }) => {
       'import.meta.env.ENABLE_DEBUG': JSON.stringify(env.ENABLE_DEBUG === 'true'),
       'import.meta.env.DISABLE_PDF_GEN': JSON.stringify(env.DISABLE_PDF_GEN === 'true'),
       'import.meta.env.DEFAULT_LANGUAGE': JSON.stringify(env.DEFAULT_LANGUAGE || 'ru'),
+      // Add React Router v7 future flags
+      'process.env.ROUTER_FUTURE_FLAGS': JSON.stringify({
+        v7_startTransition: true,
+        v7_relativeSplatPath: true
+      })
     },
     build: {
       sourcemap: false,

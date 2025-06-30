@@ -187,7 +187,7 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
       localStorage.setItem('neuropul_user_path', path);
       
       // Save current screen
-      localStorage.setItem('neuropul_current_screen', 'portal');
+      localStorage.setItem('neuropul_current_screen', path);
       
       // Track progress
       const visitCount = parseInt(localStorage.getItem('neuropul_visit_count') || '0');

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import TraeAwakens from '../components/TraeAwakens';
 import ResponseLostSoul from '../components/ResponseLostSoul';
 import ResponseAwakening from '../components/ResponseAwakening';
@@ -7,7 +8,6 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { saveUserProgress, loadUserProgress, updateUserProgress } from '../utils/progressUtils';
 import { logError } from '../lib/utils/errorLogger';
 import { cleanupAudio } from '../utils/audioUtils';
-import { useNavigate } from 'react-router-dom';
 
 type Screen = 'intro' | 'lost' | 'awakening' | 'ready' | 'portal';
 
@@ -91,6 +91,9 @@ const TraeAwakensPage: React.FC = () => {
           questStep: 0
         });
       }
+      
+      // Set mounted flag
+      isMountedRef.current = true;
     } catch (error) {
       if (import.meta.env.MODE !== 'production') {
         console.error('Error initializing session:', error);
@@ -100,9 +103,6 @@ const TraeAwakensPage: React.FC = () => {
         action: 'initialize'
       });
     }
-    
-    // Set mounted ref
-    isMountedRef.current = true;
     
     // Cleanup function
     return () => {
@@ -132,8 +132,10 @@ const TraeAwakensPage: React.FC = () => {
     
     try {
       // Update state
-      setCurrentScreen(path);
-      setUserPath(path);
+      if (isMountedRef.current) {
+        setCurrentScreen(path);
+        setUserPath(path);
+      }
       
       // Save current screen and path to localStorage
       localStorage.setItem('neuropul_current_screen', path);
@@ -184,7 +186,9 @@ const TraeAwakensPage: React.FC = () => {
     
     try {
       // Update state
-      setCurrentScreen('intro');
+      if (isMountedRef.current) {
+        setCurrentScreen('intro');
+      }
       
       // Update localStorage
       localStorage.setItem('neuropul_current_screen', 'intro');
@@ -227,7 +231,9 @@ const TraeAwakensPage: React.FC = () => {
     
     try {
       // Update state
-      setCurrentScreen('portal');
+      if (isMountedRef.current) {
+        setCurrentScreen('portal');
+      }
       
       // Update localStorage
       localStorage.setItem('neuropul_current_screen', 'portal');
@@ -255,10 +261,10 @@ const TraeAwakensPage: React.FC = () => {
           // Check if we should show CTA
           if (localStorage.getItem('neuropul_show_cta') === 'true' && localStorage.getItem('neuropul_is_paid') !== 'true') {
             // Navigate to premium page
-            navigate('/premium');
+            navigate('/premium', { replace: true });
           } else {
             // Navigate to home page
-            navigate('/');
+            navigate('/', { replace: true });
           }
           
           // Reset navigation lock
@@ -278,6 +284,11 @@ const TraeAwakensPage: React.FC = () => {
       
       // Reset navigation lock
       isNavigatingRef.current = false;
+      
+      // Fallback navigation
+      if (isMountedRef.current) {
+        navigate('/', { replace: true });
+      }
     }
   };
 

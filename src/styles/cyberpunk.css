@@ -155,20 +155,23 @@
 
 /* Digital rain effect */
 .digital-rain {
+  position: relative;
+}
+
+.digital-rain::before {
+  content: '';
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  pointer-events: none;
-  overflow: hidden;
-  opacity: 0.1;
-}
-
-.digital-rain-character {
-  position: absolute;
-  color: #06b6d4;
-  font-family: monospace;
-  font-size: 12px;
-  animation: digitalRain linear infinite;
+  background-image: repeating-linear-gradient(
+    0deg,
+    rgba(0, 255, 255, 0.1) 0%,
+    rgba(0, 255, 255, 0.1) 1px,
+    transparent 1px,
+    transparent 30px
+  );
+  animation: digitalRain 20s linear infinite;
+  background-size: 100% 30px;
 }

@@ -14,7 +14,9 @@ const getAudioContext = (): AudioContext | null => {
       if (AudioContextClass) {
         audioContext = new AudioContextClass();
       } else {
-        console.warn('Web Audio API not supported in this browser');
+        if (import.meta.env.MODE !== 'production') {
+          console.warn('Web Audio API not supported in this browser');
+        }
         return null;
       }
     }
@@ -22,13 +24,17 @@ const getAudioContext = (): AudioContext | null => {
     // Resume context if it's suspended (needed for Safari)
     if (audioContext && audioContext.state === 'suspended') {
       audioContext.resume().catch(err => {
-        console.warn('Failed to resume audio context:', err);
+        if (import.meta.env.MODE !== 'production') {
+          console.warn('Failed to resume audio context:', err);
+        }
       });
     }
     
     return audioContext;
   } catch (error) {
-    console.error('Error initializing audio context:', error);
+    if (import.meta.env.MODE !== 'production') {
+      console.error('Error initializing audio context:', error);
+    }
     logError(error, {
       component: 'audioUtils',
       action: 'getAudioContext'

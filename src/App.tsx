@@ -40,7 +40,7 @@ function App() {
 
   return (
     <FocusManager>
-      <Router>
+      <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <ScrollToTop />
         <TitleManager>
           <Suspense fallback={<LoadingFallback />}>

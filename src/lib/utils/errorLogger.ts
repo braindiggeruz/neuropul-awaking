@@ -33,17 +33,19 @@ export const logError = async (
       .join(', ');
     
     // Log to console with appropriate level
-    switch (level) {
-      case 'ERROR':
-        console.error(`🚨 [${level}] ${errorMessage}${contextStr ? ` (${contextStr})` : ''}`);
-        if (errorStack) console.error(errorStack);
-        break;
-      case 'WARNING':
-        console.warn(`⚠️ [${level}] ${errorMessage}${contextStr ? ` (${contextStr})` : ''}`);
-        break;
-      case 'INFO':
-        console.info(`ℹ️ [${level}] ${errorMessage}${contextStr ? ` (${contextStr})` : ''}`);
-        break;
+    if (import.meta.env.MODE !== 'production') {
+      switch (level) {
+        case 'ERROR':
+          console.error(`🚨 [${level}] ${errorMessage}${contextStr ? ` (${contextStr})` : ''}`);
+          if (errorStack) console.error(errorStack);
+          break;
+        case 'WARNING':
+          console.warn(`⚠️ [${level}] ${errorMessage}${contextStr ? ` (${contextStr})` : ''}`);
+          break;
+        case 'INFO':
+          console.info(`ℹ️ [${level}] ${errorMessage}${contextStr ? ` (${contextStr})` : ''}`);
+          break;
+      }
     }
     
     // Send to server if enabled
@@ -77,17 +79,24 @@ export const logError = async (
         });
         
         if (!response.ok) {
-          console.error('Failed to send error to server:', await response.text());
+          // In production, don't log this to console
+          if (import.meta.env.MODE !== 'production') {
+            console.error('Failed to send error to server:', await response.text());
+          }
         }
       } catch (serverError) {
         // Don't try to log this error to avoid infinite loops
-        console.error('Failed to send error to server:', serverError);
+        if (import.meta.env.MODE !== 'production') {
+          console.error('Failed to send error to server:', serverError);
+        }
       }
     }
   } catch (loggingError) {
     // Last resort error handling
-    console.error('Error in error logger:', loggingError);
-    console.error('Original error:', error);
+    if (import.meta.env.MODE !== 'production') {
+      console.error('Error in error logger:', loggingError);
+      console.error('Original error:', error);
+    }
   }
 };
 
@@ -125,7 +134,9 @@ export const setupGlobalErrorHandling = (): void => {
           }
         });
       } catch (handlerError) {
-        console.error('Error in global error handler:', handlerError);
+        if (import.meta.env.MODE !== 'production') {
+          console.error('Error in global error handler:', handlerError);
+        }
       }
       
       // Don't prevent default to allow browser to show error
@@ -144,14 +155,18 @@ export const setupGlobalErrorHandling = (): void => {
           action: 'unhandledRejection'
         });
       } catch (handlerError) {
-        console.error('Error in global promise rejection handler:', handlerError);
+        if (import.meta.env.MODE !== 'production') {
+          console.error('Error in global promise rejection handler:', handlerError);
+        }
       }
       
       // Don't prevent default
       return false;
     });
     
-    // Log initialization
-    console.log('🛡️ Global error handlers initialized');
+    // Log initialization only in development
+    if (import.meta.env.MODE !== 'production') {
+      console.log('🛡️ Global error handlers initialized');
+    }
   }
 };

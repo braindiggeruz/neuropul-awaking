@@ -8,6 +8,23 @@ export interface UserProgress {
   awakened: boolean;
   createdAt: string;
   lastActive: string;
+  language?: 'ru' | 'uz';
+  userName?: string; // For backward compatibility
+  dailyStreak?: number;
+  toolsUsed?: string[];
+  isPremium?: boolean;
+  premiumTier?: string;
+  questStep?: number;
+  soundEnabled?: boolean;
+  vibrationEnabled?: boolean;
+  fomoStart?: string | null;
+  hasSeenFomo?: boolean;
+  referralUsed?: boolean;
+  dailyXPDate?: string;
+  certificateIssued?: boolean;
+  lastVisit?: string;
+  refCode?: string | null;
+  version?: string;
 }
 
 export interface ArchetypeResult {
@@ -47,4 +64,46 @@ export interface PDFData {
   xp: number;
   certificateId: string;
   date: string;
+}
+
+export interface ArchetypeData {
+  id: string;
+  name: { ru: string; uz: string };
+  icon: string;
+  description: { ru: string; uz: string };
+  color: string;
+  gradient: string;
+  phrases: {
+    ru: string[];
+    uz: string[];
+  };
+}
+
+export interface AITool {
+  id: string;
+  name: { ru: string; uz: string };
+  icon: string;
+  description: { ru: string; uz: string };
+  xpReward: number;
+  isPremium: boolean;
+  premiumTier?: string;
+}
+
+export interface PremiumTier {
+  id: string;
+  name: { ru: string; uz: string };
+  price: number;
+  originalPrice: number;
+  color: string;
+  popular?: boolean;
+  features: {
+    ru: string[];
+    uz: string[];
+  };
+}
+
+export interface Translations {
+  [key: string]: {
+    [key: string]: string | { [key: string]: string };
+  };
 }

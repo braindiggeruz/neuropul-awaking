@@ -55,6 +55,18 @@ export const translations: Translations = {
     xpGained: "Получено XP",
     dailyBonusReceived: "Ежедневный бонус получен!",
     
+    // Trae Awakens
+    whoAreYou: "Кто ты?",
+    lostSoul: "💀 Я потерян",
+    lostSoulDesc: "Не знаю, что такое AI и зачем он мне",
+    wantToAwaken: "🚀 Хочу пробудиться",
+    wantToAwakenDesc: "Готов начать путь AI-мастерства",
+    alreadyKnow: "👽 Я уже в теме",
+    alreadyKnowDesc: "Знаю, что такое AI и как его использовать",
+    describeExperience: "Или опиши свой опыт своими словами...",
+    send: "Отправить",
+    stillHere: "Эй, ты ещё здесь? Выбери свой путь, чтобы мы могли начать.",
+    
     // Титулы
     titles: {
       novice: "Новичок",
@@ -118,6 +130,18 @@ export const translations: Translations = {
     levelUp: "Daraja oshdi!",
     xpGained: "XP olindi",
     dailyBonusReceived: "Kunlik bonus olindi!",
+    
+    // Trae Awakens
+    whoAreYou: "Sen kimsan?",
+    lostSoul: "💀 Men yo'qolganman",
+    lostSoulDesc: "AI nima ekanligini va nima uchun kerakligini bilmayman",
+    wantToAwaken: "🚀 Uyg'onishni xohlayman",
+    wantToAwakenDesc: "AI mahoratini o'rganishga tayyorman",
+    alreadyKnow: "👽 Men allaqachon bilaman",
+    alreadyKnowDesc: "AI nima ekanligini va qanday ishlatishni bilaman",
+    describeExperience: "Yoki tajribangizni o'z so'zlaringiz bilan tasvirlang...",
+    send: "Yuborish",
+    stillHere: "Hey, hali ham shu yerdamisan? Boshlashimiz uchun yo'lingni tanla.",
     
     // Титулы
     titles: {

@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Brain, Zap, Skull, Rocket, PenIcon as AlienIcon } from 'lucide-react';
+import { getTranslation } from '../constants/translations';
 
 interface TraeAwakensProps {
   onPathSelect: (path: 'lost' | 'awakening' | 'ready') => void;
+  language?: 'ru' | 'uz';
 }
 
-const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
+const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect, language = 'ru' }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [message, setMessage] = useState('');
   const [isTyping, setIsTyping] = useState(true);
@@ -14,9 +16,12 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
   const [userPath, setUserPath] = useState<string | null>(null);
   const [inactivityTimer, setInactivityTimer] = useState<NodeJS.Timeout | null>(null);
 
-  // Trae's initial message
-  const traeMessage = "Ты здесь. Наконец-то. Я Trae — твой проводник в мире AI. Не буду тратить время на формальности. Мне нужно знать только одно...";
-  const traeQuestion = "Кто ты?";
+  // Trae's initial message based on language
+  const traeMessage = language === 'ru' 
+    ? "Ты здесь. Наконец-то. Я Trae — твой проводник в мире AI. Не буду тратить время на формальности. Мне нужно знать только одно..."
+    : "Sen bu yerdasаn. Nihoyat. Men Trae — AI dunyosidagi yo'lboshchingman. Rasmiyatchilikka vaqt sarflamayman. Menga faqat bitta narsa kerak...";
+    
+  const traeQuestion = language === 'ru' ? "Кто ты?" : "Sen kimsan?";
 
   // Simulate typing effect
   useEffect(() => {
@@ -45,7 +50,10 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
             // Set inactivity timer
             const timer = setTimeout(() => {
               if (!userPath) {
-                setMessage(prev => `${prev}\n\nЭй, ты ещё здесь? Выбери свой путь, чтобы мы могли начать.`);
+                const reminderText = language === 'ru' 
+                  ? "Эй, ты ещё здесь? Выбери свой путь, чтобы мы могли начать."
+                  : "Hey, hali ham shu yerdamisan? Boshlashimiz uchun yo'lingni tanla.";
+                setMessage(prev => `${prev}\n\n${reminderText}`);
                 playSound('hover');
                 vibrate([100, 50, 100]);
               }
@@ -61,7 +69,7 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
       clearInterval(typingInterval);
       if (inactivityTimer) clearTimeout(inactivityTimer);
     };
-  }, []);
+  }, [language, traeMessage, traeQuestion]);
 
   // Clean up inactivity timer when component unmounts
   useEffect(() => {
@@ -139,9 +147,11 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
       const input = userInput.toLowerCase();
       let detectedPath: 'lost' | 'awakening' | 'ready' = 'awakening'; // Default
       
-      if (input.includes('не знаю') || input.includes('потерян') || input.includes('новичок')) {
+      if (input.includes('не знаю') || input.includes('потерян') || input.includes('новичок') || 
+          input.includes('bilmayman') || input.includes('yo\'qolgan') || input.includes('yangi')) {
         detectedPath = 'lost';
-      } else if (input.includes('опыт') || input.includes('знаю') || input.includes('эксперт')) {
+      } else if (input.includes('опыт') || input.includes('знаю') || input.includes('эксперт') ||
+                input.includes('tajriba') || input.includes('bilaman') || input.includes('ekspert')) {
         detectedPath = 'ready';
       }
       
@@ -150,6 +160,46 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
       
       // Handle the detected path
       handleOptionClick(detectedPath);
+    }
+  };
+
+  // Translations for buttons
+  const buttonTexts = {
+    lost: {
+      ru: '💀 Я потерян',
+      uz: '💀 Men yo\'qolganman'
+    },
+    lostDesc: {
+      ru: 'Не знаю, что такое AI и зачем он мне',
+      uz: 'AI nima ekanligini va nima uchun kerakligini bilmayman'
+    },
+    awakening: {
+      ru: '🚀 Хочу пробудиться',
+      uz: '🚀 Uyg\'onishni xohlayman'
+    },
+    awakeningDesc: {
+      ru: 'Готов начать путь AI-мастерства',
+      uz: 'AI mahoratini o\'rganishga tayyorman'
+    },
+    ready: {
+      ru: '👽 Я уже в теме',
+      uz: '👽 Men allaqachon bilaman'
+    },
+    readyDesc: {
+      ru: 'Знаю, что такое AI и как его использовать',
+      uz: 'AI nima ekanligini va qanday ishlatishni bilaman'
+    },
+    customInput: {
+      ru: 'Или опиши свой опыт своими словами...',
+      uz: 'Yoki tajribangizni o\'z so\'zlaringiz bilan tasvirlang...'
+    },
+    send: {
+      ru: 'Отправить',
+      uz: 'Yuborish'
+    },
+    back: {
+      ru: 'Назад',
+      uz: 'Orqaga'
     }
   };
 
@@ -212,7 +262,7 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
                 </div>
                 <div>
                   <h2 className="text-2xl font-bold text-white font-['Orbitron',sans-serif]">Trae</h2>
-                  <p className="text-purple-300 text-sm">AI-Наставник</p>
+                  <p className="text-purple-300 text-sm">{language === 'ru' ? 'AI-Наставник' : 'AI-Murabbiy'}</p>
                 </div>
                 
                 {/* Connection status indicator */}
@@ -253,6 +303,8 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
                       onClick={() => handleOptionClick('lost')}
                       onMouseEnter={() => playSound('hover')}
                       className="w-full p-4 bg-gray-800 hover:bg-gray-700 border border-gray-700 hover:border-purple-500 rounded-xl transition-all duration-300 flex items-center space-x-3 group relative overflow-hidden"
+                      aria-label={buttonTexts.lost[language]}
+                      role="button"
                     >
                       {/* Hover effect */}
                       <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-blue-600 opacity-0 group-hover:opacity-10 transition-opacity"></div>
@@ -261,8 +313,8 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
                         <Skull className="w-5 h-5 text-gray-400 group-hover:text-purple-400" />
                       </div>
                       <div className="text-left relative z-10">
-                        <p className="text-white font-semibold">💀 Я потерян</p>
-                        <p className="text-gray-400 text-sm">Не знаю, что такое AI и зачем он мне</p>
+                        <p className="text-white font-semibold">{buttonTexts.lost[language]}</p>
+                        <p className="text-gray-400 text-sm">{buttonTexts.lostDesc[language]}</p>
                       </div>
                     </motion.button>
                     
@@ -273,6 +325,8 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
                       onClick={() => handleOptionClick('awakening')}
                       onMouseEnter={() => playSound('hover')}
                       className="w-full p-4 bg-gradient-to-r from-purple-900 to-blue-900 hover:from-purple-800 hover:to-blue-800 border border-purple-700 hover:border-purple-500 rounded-xl transition-all duration-300 flex items-center space-x-3 group relative overflow-hidden"
+                      aria-label={buttonTexts.awakening[language]}
+                      role="button"
                     >
                       {/* Animated highlight effect */}
                       <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-blue-500 opacity-0 group-hover:opacity-20 transition-opacity"></div>
@@ -282,8 +336,8 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
                         <Rocket className="w-5 h-5 text-purple-300 group-hover:text-purple-200" />
                       </div>
                       <div className="text-left relative z-10">
-                        <p className="text-white font-semibold">🚀 Хочу пробудиться</p>
-                        <p className="text-purple-300 text-sm">Готов начать путь AI-мастерства</p>
+                        <p className="text-white font-semibold">{buttonTexts.awakening[language]}</p>
+                        <p className="text-purple-300 text-sm">{buttonTexts.awakeningDesc[language]}</p>
                       </div>
                     </motion.button>
                     
@@ -294,6 +348,8 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
                       onClick={() => handleOptionClick('ready')}
                       onMouseEnter={() => playSound('hover')}
                       className="w-full p-4 bg-gray-800 hover:bg-gray-700 border border-gray-700 hover:border-purple-500 rounded-xl transition-all duration-300 flex items-center space-x-3 group relative overflow-hidden"
+                      aria-label={buttonTexts.ready[language]}
+                      role="button"
                     >
                       {/* Hover effect */}
                       <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-blue-600 opacity-0 group-hover:opacity-10 transition-opacity"></div>
@@ -302,8 +358,8 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
                         <AlienIcon className="w-5 h-5 text-gray-400 group-hover:text-purple-400" />
                       </div>
                       <div className="text-left relative z-10">
-                        <p className="text-white font-semibold">👽 Я уже в теме</p>
-                        <p className="text-gray-400 text-sm">Знаю, что такое AI и как его использовать</p>
+                        <p className="text-white font-semibold">{buttonTexts.ready[language]}</p>
+                        <p className="text-gray-400 text-sm">{buttonTexts.readyDesc[language]}</p>
                       </div>
                     </motion.button>
                     
@@ -319,8 +375,10 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
                           onClick={() => setShowInput(true)}
                           onMouseEnter={() => playSound('hover')}
                           className="text-purple-400 hover:text-purple-300 text-sm transition-colors flex items-center mx-auto"
+                          aria-label={buttonTexts.customInput[language]}
+                          role="button"
                         >
-                          <span>Или опиши свой опыт своими словами...</span>
+                          <span>{buttonTexts.customInput[language]}</span>
                         </button>
                       ) : (
                         <div className="flex space-x-2">
@@ -328,16 +386,19 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
                             type="text"
                             value={userInput}
                             onChange={(e) => setUserInput(e.target.value)}
-                            placeholder="Расскажи о своём опыте с AI..."
+                            placeholder={language === 'ru' ? "Расскажи о своём опыте с AI..." : "AI bilan tajribangiz haqida gapiring..."}
                             className="flex-1 bg-gray-800 border border-gray-700 focus:border-purple-500 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none"
                             onKeyPress={(e) => e.key === 'Enter' && handleCustomInput()}
+                            aria-label={language === 'ru' ? "Ваш опыт с AI" : "AI bilan tajribangiz"}
                           />
                           <button
                             onClick={handleCustomInput}
                             onMouseEnter={() => playSound('hover')}
                             className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
+                            aria-label={buttonTexts.send[language]}
+                            role="button"
                           >
-                            Отправить
+                            {buttonTexts.send[language]}
                           </button>
                         </div>
                       )}

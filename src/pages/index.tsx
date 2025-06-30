@@ -25,7 +25,11 @@ export default function Home() {
     
     // Set default language
     if (!localStorage.getItem('neuropul_language')) {
-      localStorage.setItem('neuropul_language', 'ru');
+      // Detect browser language
+      const browserLang = navigator.language.startsWith('uz') ? 'uz' : 
+                          navigator.language.startsWith('ru') ? 'ru' : 'ru';
+      localStorage.setItem('neuropul_language', browserLang);
+      console.log('Language set to:', browserLang);
     }
     
     // Set default theme

@@ -12,9 +12,22 @@ const TraeAwakensPage: React.FC = () => {
   const [userPath, setUserPath] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<string>('');
   const [viewCount, setViewCount] = useState(0);
+  const [language, setLanguage] = useState<'ru' | 'uz'>('ru');
 
   // Initialize session and tracking
   useEffect(() => {
+    // Detect language preference
+    const storedLanguage = localStorage.getItem('neuropul_language');
+    const detectedLanguage = storedLanguage || 
+                            navigator.language.startsWith('uz') ? 'uz' : 
+                            navigator.language.startsWith('ru') ? 'ru' : 'ru';
+    
+    setLanguage(detectedLanguage as 'ru' | 'uz');
+    
+    if (!storedLanguage) {
+      localStorage.setItem('neuropul_language', detectedLanguage);
+    }
+    
     // Generate session ID if not exists
     const existingSessionId = localStorage.getItem('neuropul_session_id');
     if (existingSessionId) {
@@ -68,6 +81,7 @@ const TraeAwakensPage: React.FC = () => {
     console.log(`User selected path: ${path}`);
     console.log(`Session ID: ${sessionId}`);
     console.log(`View count: ${viewCount}`);
+    console.log(`Language: ${language}`);
     
     // Track path selection
     localStorage.setItem('neuropul_user_path', path);
@@ -156,7 +170,7 @@ const TraeAwakensPage: React.FC = () => {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <TraeAwakens onPathSelect={handlePathSelect} />
+            <TraeAwakens onPathSelect={handlePathSelect} language={language} />
           </motion.div>
         )}
         
@@ -168,7 +182,7 @@ const TraeAwakensPage: React.FC = () => {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <ResponseLostSoul onContinue={handleContinueToPortal} onBack={handleBack} />
+            <ResponseLostSoul onContinue={handleContinueToPortal} onBack={handleBack} language={language} />
           </motion.div>
         )}
         
@@ -180,7 +194,7 @@ const TraeAwakensPage: React.FC = () => {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <ResponseAwakening onContinue={handleContinueToPortal} onBack={handleBack} />
+            <ResponseAwakening onContinue={handleContinueToPortal} onBack={handleBack} language={language} />
           </motion.div>
         )}
         
@@ -192,7 +206,7 @@ const TraeAwakensPage: React.FC = () => {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <ResponseHackerReady onContinue={handleContinueToPortal} onBack={handleBack} />
+            <ResponseHackerReady onContinue={handleContinueToPortal} onBack={handleBack} language={language} />
           </motion.div>
         )}
         
@@ -207,7 +221,9 @@ const TraeAwakensPage: React.FC = () => {
           >
             <div className="text-center">
               <div className="w-16 h-16 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-              <p className="text-white text-lg">Переход к порталу пробуждения...</p>
+              <p className="text-white text-lg">
+                {language === 'ru' ? 'Переход к порталу пробуждения...' : 'Uyg\'onish portaliga o\'tish...'}
+              </p>
             </div>
           </motion.div>
         )}

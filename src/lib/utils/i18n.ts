@@ -52,6 +52,9 @@ export const setUserLanguage = (language: Language): void => {
     window.history.replaceState({}, '', url.toString());
     
     console.log(`Language set to: ${language}`);
+    
+    // Update HTML lang attribute
+    document.documentElement.lang = language;
   } catch (error) {
     console.error('Error setting user language:', error);
   }

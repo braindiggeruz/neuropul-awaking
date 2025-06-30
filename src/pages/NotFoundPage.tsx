@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Home, AlertTriangle } from 'lucide-react';
 import { getUserLanguage } from '../lib/utils/i18n';
@@ -9,6 +9,15 @@ interface NotFoundPageProps {
 
 const NotFoundPage: React.FC<NotFoundPageProps> = ({ onGoHome }) => {
   const language = getUserLanguage();
+  
+  // Set document title for 404 page
+  useEffect(() => {
+    document.title = language === 'ru' ? 'Страница не найдена - NeuropulAI' : 'Sahifa topilmadi - NeuropulAI';
+    
+    return () => {
+      document.title = 'NeuropulAI - Твой путь к AI-мастерству';
+    };
+  }, [language]);
   
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-blue-900 flex items-center justify-center p-4">
@@ -42,7 +51,8 @@ const NotFoundPage: React.FC<NotFoundPageProps> = ({ onGoHome }) => {
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           onClick={onGoHome}
-          className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-6 py-3 rounded-lg transition-colors flex items-center justify-center space-x-2 mx-auto"
+          className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-6 py-3 rounded-lg transition-colors flex items-center justify-center space-x-2 mx-auto focus-ring"
+          aria-label={language === 'ru' ? 'Вернуться на главную' : 'Bosh sahifaga qaytish'}
         >
           <Home className="w-5 h-5" />
           <span>

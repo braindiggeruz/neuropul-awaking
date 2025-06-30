@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
 import './styles/cyberpunk.css';
+import './styles/global.css';
 import { setupGlobalErrorHandling } from './lib/utils/errorLogger';
 
 // Set up global error handling

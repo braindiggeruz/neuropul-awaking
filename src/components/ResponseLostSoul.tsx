@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Brain, ArrowRight, HelpCircle, Zap, Lightbulb } from 'lucide-react';
 import { logError } from '../lib/utils/errorLogger';
+import { getUserLanguage, setUserLanguage } from '../lib/utils/i18n';
+import { playSound, vibrate, cleanupAudio } from '../utils/audioUtils';
 
 interface ResponseLostSoulProps {
   onContinue: () => void;
@@ -14,8 +16,17 @@ const ResponseLostSoul: React.FC<ResponseLostSoulProps> = ({ onContinue, onBack 
   const [isTyping, setIsTyping] = useState(true);
   const [showContinue, setShowContinue] = useState(false);
   const [userName, setUserName] = useState('');
-  const [language, setLanguage] = useState<'ru' | 'uz'>('ru');
+  const [language, setLanguage] = useState<'ru' | 'uz'>(getUserLanguage());
   const [isNavigating, setIsNavigating] = useState(false);
+  
+  // Refs for cleanup and preventing stale closures
+  const isNavigatingRef = useRef(false);
+  const timeoutRefs = useRef<NodeJS.Timeout[]>([]);
+
+  // Update refs when state changes
+  useEffect(() => {
+    isNavigatingRef.current = isNavigating;
+  }, [isNavigating]);
 
   // Load language preference
   useEffect(() => {
@@ -57,6 +68,8 @@ const ResponseLostSoul: React.FC<ResponseLostSoulProps> = ({ onContinue, onBack 
 
   // Simulate typing effect
   useEffect(() => {
+    let typingInterval: NodeJS.Timeout;
+    
     try {
       setIsVisible(true);
       
@@ -71,7 +84,7 @@ const ResponseLostSoul: React.FC<ResponseLostSoulProps> = ({ onContinue, onBack 
       let currentText = '';
       let currentIndex = 0;
       
-      const typingInterval = setInterval(() => {
+      typingInterval = setInterval(() => {
         if (currentIndex < traeMessage.length) {
           currentText += traeMessage[currentIndex];
           setMessage(currentText);
@@ -81,13 +94,21 @@ const ResponseLostSoul: React.FC<ResponseLostSoulProps> = ({ onContinue, onBack 
           setIsTyping(false);
           
           // Show continue button after message is fully typed
-          setTimeout(() => {
+          const continueTimeout = setTimeout(() => {
             setShowContinue(true);
           }, 500);
+          
+          timeoutRefs.current.push(continueTimeout);
         }
       }, 20); // Typing speed
       
-      return () => clearInterval(typingInterval);
+      timeoutRefs.current.push(typingInterval);
+      
+      return () => {
+        clearInterval(typingInterval);
+        timeoutRefs.current.forEach(timeout => clearTimeout(timeout));
+        cleanupAudio();
+      };
     } catch (error) {
       console.error('Error in typing effect:', error);
       logError(error, {
@@ -102,62 +123,19 @@ const ResponseLostSoul: React.FC<ResponseLostSoulProps> = ({ onContinue, onBack 
     }
   }, [language]);
 
-  // Sound effects with more cyberpunk feel
-  const playSound = (type: 'click' | 'hover') => {
-    try {
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const oscillator = audioContext.createOscillator();
-      const gainNode = audioContext.createGain();
-      
-      oscillator.connect(gainNode);
-      gainNode.connect(audioContext.destination);
-      
-      if (type === 'click') {
-        // More digital, cyberpunk click sound
-        oscillator.type = 'sawtooth';
-        oscillator.frequency.setValueAtTime(440, audioContext.currentTime);
-        oscillator.frequency.setValueAtTime(330, audioContext.currentTime + 0.1);
-        gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
-        oscillator.start(audioContext.currentTime);
-        oscillator.stop(audioContext.currentTime + 0.2);
-      } else {
-        // More digital, cyberpunk hover sound
-        oscillator.type = 'square';
-        oscillator.frequency.setValueAtTime(660, audioContext.currentTime);
-        gainNode.gain.setValueAtTime(0.05, audioContext.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
-        oscillator.start(audioContext.currentTime);
-        oscillator.stop(audioContext.currentTime + 0.1);
-      }
-    } catch (error) {
-      console.error('Audio not supported:', error);
-    }
-  };
-
-  // Vibration feedback
-  const vibrate = (pattern: number[]) => {
-    try {
-      if (navigator.vibrate) {
-        navigator.vibrate(pattern);
-      }
-    } catch (error) {
-      console.error('Vibration not supported:', error);
-    }
-  };
-
   const handleContinue = () => {
     try {
-      if (isNavigating) {
+      if (isNavigatingRef.current) {
         console.log('Navigation already in progress, ignoring');
         return;
       }
       
       console.log('Continue button clicked');
       setIsNavigating(true);
+      isNavigatingRef.current = true;
       
-      playSound('click');
-      vibrate([50, 30, 50]);
+      playSound('click', true);
+      vibrate([50, 30, 50], true);
       
       // Save user experience level
       localStorage.setItem('neuropul_user_experience', 'beginner');
@@ -171,9 +149,19 @@ const ResponseLostSoul: React.FC<ResponseLostSoulProps> = ({ onContinue, onBack 
       localStorage.setItem('neuropul_viewed_messages', '1');
       
       // Call onContinue with a small delay
-      setTimeout(() => {
+      const continueTimeout = setTimeout(() => {
         onContinue();
-      }, 100);
+        
+        // Reset navigation state after a delay
+        const resetTimeout = setTimeout(() => {
+          setIsNavigating(false);
+          isNavigatingRef.current = false;
+        }, 1000);
+        
+        timeoutRefs.current.push(resetTimeout);
+      }, 300);
+      
+      timeoutRefs.current.push(continueTimeout);
     } catch (error) {
       console.error('Error in handleContinue:', error);
       logError(error, {
@@ -183,26 +171,38 @@ const ResponseLostSoul: React.FC<ResponseLostSoulProps> = ({ onContinue, onBack 
       
       // Reset navigation state
       setIsNavigating(false);
+      isNavigatingRef.current = false;
     }
   };
 
   const handleBack = () => {
     try {
-      if (isNavigating) {
+      if (isNavigatingRef.current) {
         console.log('Navigation already in progress, ignoring');
         return;
       }
       
       console.log('Back button clicked');
       setIsNavigating(true);
+      isNavigatingRef.current = true;
       
-      playSound('click');
-      vibrate([30]);
+      playSound('click', true);
+      vibrate([30], true);
       
       // Call onBack with a small delay
-      setTimeout(() => {
+      const backTimeout = setTimeout(() => {
         onBack();
-      }, 100);
+        
+        // Reset navigation state after a delay
+        const resetTimeout = setTimeout(() => {
+          setIsNavigating(false);
+          isNavigatingRef.current = false;
+        }, 1000);
+        
+        timeoutRefs.current.push(resetTimeout);
+      }, 300);
+      
+      timeoutRefs.current.push(backTimeout);
     } catch (error) {
       console.error('Error in handleBack:', error);
       logError(error, {
@@ -212,6 +212,7 @@ const ResponseLostSoul: React.FC<ResponseLostSoulProps> = ({ onContinue, onBack 
       
       // Reset navigation state
       setIsNavigating(false);
+      isNavigatingRef.current = false;
     }
   };
 
@@ -225,8 +226,8 @@ const ResponseLostSoul: React.FC<ResponseLostSoulProps> = ({ onContinue, onBack 
         localStorage.setItem('neuropul_user_name', nameInput.trim());
         setUserName(nameInput.trim());
         setShowNameInput(false);
-        playSound('click');
-        vibrate([50, 30, 50]);
+        playSound('click', true);
+        vibrate([50, 30, 50], true);
       }
     } catch (error) {
       console.error('Error in handleNameSubmit:', error);
@@ -236,6 +237,14 @@ const ResponseLostSoul: React.FC<ResponseLostSoulProps> = ({ onContinue, onBack 
       });
     }
   };
+
+  // Clean up on unmount
+  useEffect(() => {
+    return () => {
+      timeoutRefs.current.forEach(timeout => clearTimeout(timeout));
+      cleanupAudio();
+    };
+  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-blue-900 flex items-center justify-center p-4 overflow-hidden">
@@ -283,13 +292,13 @@ const ResponseLostSoul: React.FC<ResponseLostSoulProps> = ({ onContinue, onBack 
           onClick={() => {
             const newLang = language === 'ru' ? 'uz' : 'ru';
             setLanguage(newLang);
-            localStorage.setItem('neuropul_language', newLang);
+            setUserLanguage(newLang);
             // Update URL with language parameter
             const url = new URL(window.location.href);
             url.searchParams.set('lang', newLang);
             window.history.replaceState({}, '', url.toString());
           }}
-          className="bg-black bg-opacity-50 text-white px-4 py-2 rounded-lg text-sm hover:bg-opacity-70 transition-colors"
+          className="bg-black bg-opacity-50 text-white px-4 py-2 rounded-lg text-sm hover:bg-opacity-70 transition-colors focus-ring"
           aria-label={language === 'ru' ? 'Переключить на узбекский' : 'Rus tiliga o\'tish'}
           disabled={isNavigating}
         >
@@ -353,7 +362,7 @@ const ResponseLostSoul: React.FC<ResponseLostSoulProps> = ({ onContinue, onBack 
                 >
                   <button
                     onClick={() => setShowNameInput(true)}
-                    className="text-cyan-400 hover:text-cyan-300 transition-colors text-sm"
+                    className="text-cyan-400 hover:text-cyan-300 transition-colors text-sm focus-ring"
                     aria-label={language === 'ru' ? 'Кстати, как тебя зовут?' : 'Aytgancha, ismingiz nima?'}
                     disabled={isNavigating}
                   >
@@ -381,7 +390,7 @@ const ResponseLostSoul: React.FC<ResponseLostSoulProps> = ({ onContinue, onBack 
                   />
                   <button
                     onClick={handleNameSubmit}
-                    className="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg transition-colors"
+                    className="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg transition-colors focus-ring"
                     aria-label={language === 'ru' ? 'Сохранить' : 'Saqlash'}
                     disabled={isNavigating}
                   >
@@ -513,8 +522,8 @@ const ResponseLostSoul: React.FC<ResponseLostSoulProps> = ({ onContinue, onBack 
                   >
                     <button
                       onClick={handleBack}
-                      onMouseEnter={() => playSound('hover')}
-                      className="px-6 py-3 bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white rounded-lg transition-colors flex items-center justify-center space-x-2 border border-gray-700 hover:border-purple-500 group relative overflow-hidden"
+                      onMouseEnter={() => playSound('hover', true)}
+                      className="px-6 py-3 bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white rounded-lg transition-colors flex items-center justify-center space-x-2 border border-gray-700 hover:border-purple-500 group relative overflow-hidden focus-ring"
                       aria-label={language === 'ru' ? 'Назад' : 'Orqaga'}
                       disabled={isNavigating}
                     >
@@ -527,8 +536,8 @@ const ResponseLostSoul: React.FC<ResponseLostSoulProps> = ({ onContinue, onBack 
                     
                     <button
                       onClick={handleContinue}
-                      onMouseEnter={() => playSound('hover')}
-                      className="flex-1 px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-lg transition-colors flex items-center justify-center space-x-2 relative overflow-hidden group"
+                      onMouseEnter={() => playSound('hover', true)}
+                      className="flex-1 px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-lg transition-colors flex items-center justify-center space-x-2 relative overflow-hidden group focus-ring"
                       aria-label={language === 'ru' ? 'Хочу пробудиться' : 'Uyg\'onishni xohlayman'}
                       disabled={isNavigating}
                     >
@@ -546,8 +555,8 @@ const ResponseLostSoul: React.FC<ResponseLostSoulProps> = ({ onContinue, onBack 
                       onClick={() => {
                         window.open('https://chat.openai.com', '_blank', 'noopener,noreferrer');
                       }}
-                      onMouseEnter={() => playSound('hover')}
-                      className="px-6 py-3 bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white rounded-lg transition-colors flex items-center justify-center space-x-2 border border-gray-700 hover:border-purple-500 group relative overflow-hidden"
+                      onMouseEnter={() => playSound('hover', true)}
+                      className="px-6 py-3 bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white rounded-lg transition-colors flex items-center justify-center space-x-2 border border-gray-700 hover:border-purple-500 group relative overflow-hidden focus-ring"
                       aria-label={language === 'ru' ? 'Узнать больше про AI' : 'AI haqida ko\'proq bilish'}
                       rel="noopener noreferrer"
                       disabled={isNavigating}
@@ -596,52 +605,6 @@ const ResponseLostSoul: React.FC<ResponseLostSoulProps> = ({ onContinue, onBack 
           )}
         </AnimatePresence>
       </div>
-      
-      {/* Global CSS for cyberpunk effects */}
-      <style jsx global>{`
-        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;900&display=swap');
-        
-        @keyframes digitalRain {
-          0% { transform: translateY(-100px); }
-          100% { transform: translateY(100vh); }
-        }
-        
-        .bg-scanline {
-          background: linear-gradient(
-            to bottom,
-            transparent 50%,
-            rgba(0, 0, 0, 0.5) 50%
-          );
-          background-size: 100% 4px;
-        }
-        
-        .glitch-text {
-          position: relative;
-          animation: glitch 3s infinite;
-          color: rgba(139, 92, 246, 0.5);
-        }
-        
-        @keyframes glitch {
-          0% { transform: translate(0); }
-          20% { transform: translate(-2px, 2px); }
-          40% { transform: translate(-2px, -2px); }
-          60% { transform: translate(2px, 2px); }
-          80% { transform: translate(2px, -2px); }
-          100% { transform: translate(0); }
-        }
-        
-        .glitch-corner {
-          background: linear-gradient(45deg, transparent 48%, #00ffff 49%, transparent 51%);
-          animation: cornerGlitch 2s infinite;
-        }
-        
-        @keyframes cornerGlitch {
-          0% { transform: scale(1); opacity: 0.3; }
-          50% { transform: scale(1.2); opacity: 0.6; }
-          51% { transform: scale(0.8); opacity: 0.3; }
-          100% { transform: scale(1); opacity: 0.3; }
-        }
-      `}</style>
     </div>
   );
 };

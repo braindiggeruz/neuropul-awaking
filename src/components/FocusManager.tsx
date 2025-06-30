@@ -65,7 +65,7 @@ const FocusManager: React.FC<FocusManagerProps> = ({ children }) => {
   }, []);
 
   return (
-    <div ref={containerRef}>
+    <div ref={containerRef} className="focus-container">
       {children}
     </div>
   );

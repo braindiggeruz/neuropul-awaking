@@ -1,0 +1,27 @@
+/* Global focus styles for accessibility */
+:focus-visible {
+  outline: 2px solid #8b5cf6;
+  outline-offset: 2px;
+}
+
+/* For buttons that shouldn't show outline */
+.focus-ring:focus-visible {
+  box-shadow: 0 0 0 2px #8b5cf6;
+  outline: none;
+}
+
+/* Ensure interactive elements have visible focus */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid #8b5cf6;
+  outline-offset: 2px;
+}
+
+/* Ensure keyboard navigation is visible */
+[tabindex]:focus-visible {
+  outline: 2px solid #8b5cf6;
+  outline-offset: 2px;
+}

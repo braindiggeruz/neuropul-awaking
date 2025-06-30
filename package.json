@@ -10,7 +10,9 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "clean": "rm -rf dist .vite node_modules/.vite",
+    "deploy": "netlify deploy --prod --dir=dist"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.50.2",

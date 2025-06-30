@@ -1,4 +1,5 @@
 import { logError } from '../lib/utils/errorLogger';
+import { cleanupAudio } from './audioUtils';
 
 // Audio context instance (created lazily)
 let audioContext: AudioContext | null = null;
@@ -26,7 +27,7 @@ const getAudioContext = (): AudioContext | null => {
   }
 };
 
-export const playSound = (type: 'levelup' | 'success' | 'error' | 'click', enabled: boolean = true) => {
+export const playSound = (type: 'levelup' | 'success' | 'error' | 'click' | 'hover' | 'xp', enabled: boolean = true) => {
   if (!enabled) return;
   
   try {
@@ -71,15 +72,48 @@ export const playSound = (type: 'levelup' | 'success' | 'error' | 'click', enabl
         break;
         
       case 'click':
-        oscillator.frequency.setValueAtTime(800, context.currentTime);
+        // Digital click sound
+        oscillator.type = 'sawtooth';
+        oscillator.frequency.setValueAtTime(440, context.currentTime);
+        oscillator.frequency.setValueAtTime(330, context.currentTime + 0.1);
+        gainNode.gain.setValueAtTime(0.1, context.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, context.currentTime + 0.2);
+        oscillator.start(context.currentTime);
+        oscillator.stop(context.currentTime + 0.2);
+        break;
+        
+      case 'hover':
+        // Subtle hover sound
+        oscillator.type = 'square';
+        oscillator.frequency.setValueAtTime(660, context.currentTime);
         gainNode.gain.setValueAtTime(0.05, context.currentTime);
         gainNode.gain.exponentialRampToValueAtTime(0.01, context.currentTime + 0.1);
         oscillator.start(context.currentTime);
         oscillator.stop(context.currentTime + 0.1);
         break;
+        
+      case 'xp':
+        // XP gain sound
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(523.25, context.currentTime); // C5
+        oscillator.frequency.setValueAtTime(659.25, context.currentTime + 0.1); // E5
+        oscillator.frequency.setValueAtTime(783.99, context.currentTime + 0.2); // G5
+        gainNode.gain.setValueAtTime(0.1, context.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, context.currentTime + 0.3);
+        oscillator.start(context.currentTime);
+        oscillator.stop(context.currentTime + 0.3);
+        break;
     }
   } catch (error) {
     // Silently fail in production
+    if (import.meta.env.MODE !== 'production') {
+      console.error('Error playing sound:', error);
+      logError(error, {
+        component: 'sounds',
+        action: 'playSound',
+        additionalData: { soundType: type }
+      });
+    }
   }
 };
 
@@ -92,19 +126,19 @@ export const vibrate = (pattern: number[], enabled: boolean = true) => {
     }
   } catch (error) {
     // Silently fail in production
+    if (import.meta.env.MODE !== 'production') {
+      console.error('Error triggering vibration:', error);
+      logError(error, {
+        component: 'sounds',
+        action: 'vibrate'
+      });
+    }
   }
 };
 
 // Clean up audio resources
-export const cleanupAudio = (): void => {
-  if (audioContext) {
-    try {
-      audioContext.close();
-      audioContext = null;
-    } catch (error) {
-      // Silently fail in production
-    }
-  }
+export const cleanupSound = (): void => {
+  cleanupAudio();
 };
 
 // Check if audio is supported

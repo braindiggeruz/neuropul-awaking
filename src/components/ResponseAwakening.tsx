@@ -5,6 +5,7 @@ import { logError } from '../lib/utils/errorLogger';
 import { getUserLanguage, translate } from '../lib/utils/i18n';
 import LanguageSwitcher from './LanguageSwitcher';
 import { saveUserProgress, loadUserProgress, updateUserProgress, addUserXP } from '../utils/progressUtils';
+import { playSound, vibrate } from '../utils/sounds';
 
 interface ResponseAwakeningProps {
   onContinue: () => void;
@@ -24,6 +25,7 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
   // Refs to prevent stale closures in event handlers
   const isNavigatingRef = useRef(false);
   const languageRef = useRef(language);
+  const timeoutRefs = useRef<NodeJS.Timeout[]>([]);
 
   // Update refs when state changes
   useEffect(() => {
@@ -87,7 +89,7 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
           setIsTyping(false);
           
           // Show continue button after message is fully typed
-          setTimeout(() => {
+          const continueTimeout = setTimeout(() => {
             setShowContinue(true);
             
             // Award XP for reaching this step
@@ -122,14 +124,19 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
             }
             
             // Play XP sound
-            playSound('xp');
-            vibrate([50, 30, 50]);
+            playSound('xp', true);
+            vibrate([50, 30, 50], true);
           }, 500);
+          
+          timeoutRefs.current.push(continueTimeout);
         }
       }, 20); // Typing speed
       
+      timeoutRefs.current.push(typingInterval);
+      
       return () => {
         clearInterval(typingInterval);
+        timeoutRefs.current.forEach(timeout => clearTimeout(timeout));
       };
     } catch (error) {
       console.error('Error in typing effect:', error);
@@ -148,60 +155,6 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
     }
   }, [language]);
 
-  // Sound effects with more cyberpunk feel
-  const playSound = (type: 'click' | 'hover' | 'xp') => {
-    try {
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const oscillator = audioContext.createOscillator();
-      const gainNode = audioContext.createGain();
-      
-      oscillator.connect(gainNode);
-      gainNode.connect(audioContext.destination);
-      
-      if (type === 'click') {
-        // More digital, cyberpunk click sound
-        oscillator.type = 'sawtooth';
-        oscillator.frequency.setValueAtTime(440, audioContext.currentTime);
-        oscillator.frequency.setValueAtTime(330, audioContext.currentTime + 0.1);
-        gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
-        oscillator.start(audioContext.currentTime);
-        oscillator.stop(audioContext.currentTime + 0.2);
-      } else if (type === 'xp') {
-        // XP gain sound
-        oscillator.type = 'sine';
-        oscillator.frequency.setValueAtTime(523.25, audioContext.currentTime); // C5
-        oscillator.frequency.setValueAtTime(659.25, audioContext.currentTime + 0.1); // E5
-        oscillator.frequency.setValueAtTime(783.99, audioContext.currentTime + 0.2); // G5
-        gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
-        oscillator.start(audioContext.currentTime);
-        oscillator.stop(audioContext.currentTime + 0.3);
-      } else {
-        // More digital, cyberpunk hover sound
-        oscillator.type = 'square';
-        oscillator.frequency.setValueAtTime(660, audioContext.currentTime);
-        gainNode.gain.setValueAtTime(0.05, audioContext.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
-        oscillator.start(audioContext.currentTime);
-        oscillator.stop(audioContext.currentTime + 0.1);
-      }
-    } catch (error) {
-      console.error('Audio not supported:', error);
-    }
-  };
-
-  // Vibration feedback
-  const vibrate = (pattern: number[]) => {
-    try {
-      if (navigator.vibrate) {
-        navigator.vibrate(pattern);
-      }
-    } catch (error) {
-      console.error('Vibration not supported:', error);
-    }
-  };
-
   const handleContinue = () => {
     try {
       if (isNavigatingRef.current) {
@@ -213,8 +166,8 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
       setIsNavigating(true);
       isNavigatingRef.current = true;
       
-      playSound('click');
-      vibrate([50, 30, 50]);
+      playSound('click', true);
+      vibrate([50, 30, 50], true);
       
       // Save user experience level
       localStorage.setItem('neuropul_user_experience', 'intermediate');
@@ -240,15 +193,19 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
       });
       
       // Call onContinue with a small delay
-      setTimeout(() => {
+      const continueTimeout = setTimeout(() => {
         onContinue();
         
         // Reset navigation state after a delay in case the navigation fails
-        setTimeout(() => {
+        const resetTimeout = setTimeout(() => {
           setIsNavigating(false);
           isNavigatingRef.current = false;
         }, 1000);
-      }, 100);
+        
+        timeoutRefs.current.push(resetTimeout);
+      }, 300);
+      
+      timeoutRefs.current.push(continueTimeout);
     } catch (error) {
       console.error('Error in handleContinue:', error);
       logError(error, {
@@ -273,8 +230,8 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
       setIsNavigating(true);
       isNavigatingRef.current = true;
       
-      playSound('click');
-      vibrate([30]);
+      playSound('click', true);
+      vibrate([30], true);
       
       // Save current screen
       localStorage.setItem('neuropul_current_screen', 'intro');
@@ -286,15 +243,19 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
       });
       
       // Call onBack with a small delay
-      setTimeout(() => {
+      const backTimeout = setTimeout(() => {
         onBack();
         
         // Reset navigation state after a delay in case the navigation fails
-        setTimeout(() => {
+        const resetTimeout = setTimeout(() => {
           setIsNavigating(false);
           isNavigatingRef.current = false;
         }, 1000);
-      }, 100);
+        
+        timeoutRefs.current.push(resetTimeout);
+      }, 300);
+      
+      timeoutRefs.current.push(backTimeout);
     } catch (error) {
       console.error('Error in handleBack:', error);
       logError(error, {
@@ -318,8 +279,8 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
         localStorage.setItem('neuropul_user_name', nameInput.trim());
         setUserName(nameInput.trim());
         setShowNameInput(false);
-        playSound('click');
-        vibrate([50, 30, 50]);
+        playSound('click', true);
+        vibrate([50, 30, 50], true);
         
         // Update user progress
         updateUserProgress({
@@ -368,11 +329,15 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
           setIsTyping(false);
           
           // Show continue button after message is fully typed
-          setTimeout(() => {
+          const continueTimeout = setTimeout(() => {
             setShowContinue(true);
           }, 500);
+          
+          timeoutRefs.current.push(continueTimeout);
         }
       }, 20);
+      
+      timeoutRefs.current.push(typingInterval);
     } catch (error) {
       console.error('Error changing language:', error);
       logError(error, {
@@ -381,6 +346,13 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
       });
     }
   };
+
+  // Clean up timeouts on unmount
+  useEffect(() => {
+    return () => {
+      timeoutRefs.current.forEach(timeout => clearTimeout(timeout));
+    };
+  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-blue-900 flex items-center justify-center p-4 overflow-hidden">
@@ -627,7 +599,7 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
                   >
                     <button
                       onClick={handleBack}
-                      onMouseEnter={() => playSound('hover')}
+                      onMouseEnter={() => playSound('hover', true)}
                       className="px-6 py-3 bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white rounded-lg transition-colors flex items-center justify-center space-x-2 border border-gray-700 hover:border-purple-500 group relative overflow-hidden"
                       aria-label={translate('back', language)}
                       disabled={isNavigating}
@@ -641,7 +613,7 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
                     
                     <button
                       onClick={handleContinue}
-                      onMouseEnter={() => playSound('hover')}
+                      onMouseEnter={() => playSound('hover', true)}
                       className="flex-1 px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-lg transition-colors flex items-center justify-center space-x-2 relative overflow-hidden group"
                       aria-label={translate('startAwakening', language)}
                       disabled={isNavigating}

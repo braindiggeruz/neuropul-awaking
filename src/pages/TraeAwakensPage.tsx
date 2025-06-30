@@ -5,6 +5,7 @@ import ResponseAwakening from '../components/ResponseAwakening';
 import ResponseHackerReady from '../components/ResponseHackerReady';
 import { AnimatePresence, motion } from 'framer-motion';
 import { saveUserProgress, loadUserProgress, updateUserProgress } from '../utils/progressUtils';
+import { logError } from '../lib/utils/errorLogger';
 
 type Screen = 'intro' | 'lost' | 'awakening' | 'ready' | 'portal';
 
@@ -14,79 +15,90 @@ const TraeAwakensPage: React.FC = () => {
   const [sessionId, setSessionId] = useState<string>('');
   const [viewCount, setViewCount] = useState(0);
   
-  // Refs for cleanup
+  // Refs for cleanup and navigation control
   const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
   const isNavigatingRef = useRef<boolean>(false);
+  const timeoutRefs = useRef<NodeJS.Timeout[]>([]);
 
   // Initialize session and tracking
   useEffect(() => {
-    // Check if there's a saved path and screen
-    const savedPath = localStorage.getItem('neuropul_user_path');
-    const savedScreen = localStorage.getItem('neuropul_current_screen');
-    
-    if (savedPath) {
-      setUserPath(savedPath);
+    try {
+      // Check if there's a saved path and screen
+      const savedPath = localStorage.getItem('neuropul_user_path');
+      const savedScreen = localStorage.getItem('neuropul_current_screen');
       
-      // If there's a saved screen that's not 'intro', restore it
-      if (savedScreen && savedScreen !== 'intro' && 
-          ['lost', 'awakening', 'ready', 'portal'].includes(savedScreen)) {
-        console.log(`Restoring saved screen: ${savedScreen}`);
-        setCurrentScreen(savedScreen as Screen);
+      console.log('Initializing with saved path:', savedPath, 'and screen:', savedScreen);
+      
+      if (savedPath) {
+        setUserPath(savedPath);
+        
+        // If there's a saved screen that's not 'intro', restore it
+        if (savedScreen && savedScreen !== 'intro' && 
+            ['lost', 'awakening', 'ready', 'portal'].includes(savedScreen)) {
+          console.log(`Restoring saved screen: ${savedScreen}`);
+          setCurrentScreen(savedScreen as Screen);
+        }
       }
-    }
-    
-    // Generate session ID if not exists
-    const existingSessionId = localStorage.getItem('neuropul_session_id');
-    if (existingSessionId) {
-      setSessionId(existingSessionId);
-    } else {
-      const newSessionId = `session_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-      localStorage.setItem('neuropul_session_id', newSessionId);
-      setSessionId(newSessionId);
-    }
-    
-    // Track view count
-    const views = parseInt(localStorage.getItem('neuropul_view_count') || '0');
-    const newViewCount = views + 1;
-    localStorage.setItem('neuropul_view_count', newViewCount.toString());
-    setViewCount(newViewCount);
-    
-    // Track first visit date if not set
-    if (!localStorage.getItem('neuropul_first_visit')) {
-      localStorage.setItem('neuropul_first_visit', new Date().toISOString());
-    }
-    
-    // Track last visit date
-    localStorage.setItem('neuropul_last_visit', new Date().toISOString());
-    
-    // Log user agent for analytics
-    const userAgent = navigator.userAgent;
-    localStorage.setItem('neuropul_user_agent', userAgent);
-    
-    // Initialize XP if not exists
-    if (!localStorage.getItem('neuropul_xp')) {
-      localStorage.setItem('neuropul_xp', '0');
-    }
-    
-    // Initialize isPaid flag if not exists
-    if (!localStorage.getItem('neuropul_is_paid')) {
-      localStorage.setItem('neuropul_is_paid', 'false');
-    }
-    
-    // Load or initialize user progress
-    const existingProgress = loadUserProgress();
-    if (!existingProgress) {
-      saveUserProgress({
-        name: '',
-        archetype: null,
-        avatarUrl: '',
-        xp: 0,
-        level: 1,
-        prophecy: '',
-        awakened: false,
-        createdAt: new Date().toISOString(),
-        lastActive: new Date().toISOString(),
-        questStep: 0
+      
+      // Generate session ID if not exists
+      const existingSessionId = localStorage.getItem('neuropul_session_id');
+      if (existingSessionId) {
+        setSessionId(existingSessionId);
+      } else {
+        const newSessionId = `session_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+        localStorage.setItem('neuropul_session_id', newSessionId);
+        setSessionId(newSessionId);
+      }
+      
+      // Track view count
+      const views = parseInt(localStorage.getItem('neuropul_view_count') || '0');
+      const newViewCount = views + 1;
+      localStorage.setItem('neuropul_view_count', newViewCount.toString());
+      setViewCount(newViewCount);
+      
+      // Track first visit date if not set
+      if (!localStorage.getItem('neuropul_first_visit')) {
+        localStorage.setItem('neuropul_first_visit', new Date().toISOString());
+      }
+      
+      // Track last visit date
+      localStorage.setItem('neuropul_last_visit', new Date().toISOString());
+      
+      // Log user agent for analytics
+      const userAgent = navigator.userAgent;
+      localStorage.setItem('neuropul_user_agent', userAgent);
+      
+      // Initialize XP if not exists
+      if (!localStorage.getItem('neuropul_xp')) {
+        localStorage.setItem('neuropul_xp', '0');
+      }
+      
+      // Initialize isPaid flag if not exists
+      if (!localStorage.getItem('neuropul_is_paid')) {
+        localStorage.setItem('neuropul_is_paid', 'false');
+      }
+      
+      // Load or initialize user progress
+      const existingProgress = loadUserProgress();
+      if (!existingProgress) {
+        saveUserProgress({
+          name: '',
+          archetype: null,
+          avatarUrl: '',
+          xp: 0,
+          level: 1,
+          prophecy: '',
+          awakened: false,
+          createdAt: new Date().toISOString(),
+          lastActive: new Date().toISOString(),
+          questStep: 0
+        });
+      }
+    } catch (error) {
+      console.error('Error initializing session:', error);
+      logError(error, {
+        component: 'TraeAwakensPage',
+        action: 'initialize'
       });
     }
     
@@ -95,116 +107,174 @@ const TraeAwakensPage: React.FC = () => {
       if (inactivityTimerRef.current) {
         clearTimeout(inactivityTimerRef.current);
       }
+      
+      // Clear all timeouts
+      timeoutRefs.current.forEach(timeout => clearTimeout(timeout));
     };
   }, []);
 
   const handlePathSelect = (path: 'lost' | 'awakening' | 'ready') => {
-    if (isNavigatingRef.current) return;
-    isNavigatingRef.current = true;
-    
-    setCurrentScreen(path);
-    setUserPath(path);
-    
-    // Save current screen and path to localStorage
-    localStorage.setItem('neuropul_current_screen', path);
-    localStorage.setItem('neuropul_user_path', path);
-    
-    // Log user selection
-    console.log(`User selected path: ${path}`);
-    console.log(`Session ID: ${sessionId}`);
-    console.log(`View count: ${viewCount}`);
-    
-    // Track path selection
-    localStorage.setItem('neuropul_path_selected_at', new Date().toISOString());
-    
-    // Set level_selected flag
-    localStorage.setItem('neuropul_level_selected', 'true');
-    
-    // Update user progress
-    updateUserProgress({
-      userPath: path,
-      questStep: 1,
-      lastActive: new Date().toISOString()
-    });
-    
-    // Reset navigation lock after a short delay
-    setTimeout(() => {
-      isNavigatingRef.current = false;
-    }, 300);
-  };
-
-  const handleBack = () => {
-    if (isNavigatingRef.current) return;
-    isNavigatingRef.current = true;
-    
-    setCurrentScreen('intro');
-    
-    // Update localStorage
-    localStorage.setItem('neuropul_current_screen', 'intro');
-    
-    // Log navigation
-    console.log('User navigated back to intro');
-    
-    // Update user progress
-    updateUserProgress({
-      questStep: 0,
-      lastActive: new Date().toISOString()
-    });
-    
-    // Reset navigation lock after a short delay
-    setTimeout(() => {
-      isNavigatingRef.current = false;
-    }, 300);
-  };
-
-  const handleContinueToPortal = () => {
-    if (isNavigatingRef.current) return;
-    isNavigatingRef.current = true;
-    
-    setCurrentScreen('portal');
-    
-    // Update localStorage
-    localStorage.setItem('neuropul_current_screen', 'portal');
-    
-    // Log completion
-    console.log('User completed introduction');
-    console.log(`Final path: ${userPath}`);
-    
-    // Set completion flag
-    localStorage.setItem('neuropul_intro_completed', 'true');
-    localStorage.setItem('neuropul_intro_completed_at', new Date().toISOString());
-    
-    // Update user progress
-    updateUserProgress({
-      questStep: 2,
-      lastActive: new Date().toISOString()
-    });
-    
-    // Check if this is the third message viewed (for CTA trigger)
-    const messagesViewed = parseInt(localStorage.getItem('neuropul_viewed_messages') || '0');
-    if (messagesViewed >= 3) {
-      // Set flag for CTA
-      localStorage.setItem('neuropul_show_cta', 'true');
+    // Prevent multiple navigation attempts
+    if (isNavigatingRef.current) {
+      console.log('Navigation already in progress, ignoring');
+      return;
     }
     
-    // In a real implementation, you would navigate to the awakening portal or dashboard
-    // For now, we'll just redirect to the home page after a delay
-    const redirectTimeout = setTimeout(() => {
-      // Check if we should show CTA
-      if (localStorage.getItem('neuropul_show_cta') === 'true' && localStorage.getItem('neuropul_is_paid') !== 'true') {
-        // Redirect to CTA page
-        window.location.href = '/premium';
-      } else {
-        // Redirect to main app
-        window.location.href = '/';
-      }
+    isNavigatingRef.current = true;
+    
+    try {
+      console.log(`User selected path: ${path}`);
+      
+      // Update state
+      setCurrentScreen(path);
+      setUserPath(path);
+      
+      // Save current screen and path to localStorage
+      localStorage.setItem('neuropul_current_screen', path);
+      localStorage.setItem('neuropul_user_path', path);
+      
+      // Log user selection
+      console.log(`Session ID: ${sessionId}`);
+      console.log(`View count: ${viewCount}`);
+      
+      // Track path selection
+      localStorage.setItem('neuropul_path_selected_at', new Date().toISOString());
+      
+      // Set level_selected flag
+      localStorage.setItem('neuropul_level_selected', 'true');
+      
+      // Update user progress
+      updateUserProgress({
+        userPath: path,
+        questStep: 1,
+        lastActive: new Date().toISOString()
+      });
+      
+      // Reset navigation lock after a delay
+      const resetTimeout = setTimeout(() => {
+        isNavigatingRef.current = false;
+      }, 500);
+      
+      timeoutRefs.current.push(resetTimeout);
+    } catch (error) {
+      console.error('Error in handlePathSelect:', error);
+      logError(error, {
+        component: 'TraeAwakensPage',
+        action: 'handlePathSelect'
+      });
       
       // Reset navigation lock
       isNavigatingRef.current = false;
-    }, 500);
+    }
+  };
+
+  const handleBack = () => {
+    // Prevent multiple navigation attempts
+    if (isNavigatingRef.current) {
+      console.log('Navigation already in progress, ignoring');
+      return;
+    }
     
-    // Cleanup function for the timeout
-    return () => clearTimeout(redirectTimeout);
+    isNavigatingRef.current = true;
+    
+    try {
+      console.log('User navigated back to intro');
+      
+      // Update state
+      setCurrentScreen('intro');
+      
+      // Update localStorage
+      localStorage.setItem('neuropul_current_screen', 'intro');
+      
+      // Update user progress
+      updateUserProgress({
+        questStep: 0,
+        lastActive: new Date().toISOString()
+      });
+      
+      // Reset navigation lock after a delay
+      const resetTimeout = setTimeout(() => {
+        isNavigatingRef.current = false;
+      }, 500);
+      
+      timeoutRefs.current.push(resetTimeout);
+    } catch (error) {
+      console.error('Error in handleBack:', error);
+      logError(error, {
+        component: 'TraeAwakensPage',
+        action: 'handleBack'
+      });
+      
+      // Reset navigation lock
+      isNavigatingRef.current = false;
+    }
+  };
+
+  const handleContinueToPortal = () => {
+    // Prevent multiple navigation attempts
+    if (isNavigatingRef.current) {
+      console.log('Navigation already in progress, ignoring');
+      return;
+    }
+    
+    isNavigatingRef.current = true;
+    
+    try {
+      console.log('User continuing to portal');
+      
+      // Update state
+      setCurrentScreen('portal');
+      
+      // Update localStorage
+      localStorage.setItem('neuropul_current_screen', 'portal');
+      
+      // Log completion
+      console.log(`Final path: ${userPath}`);
+      
+      // Set completion flag
+      localStorage.setItem('neuropul_intro_completed', 'true');
+      localStorage.setItem('neuropul_intro_completed_at', new Date().toISOString());
+      
+      // Update user progress
+      updateUserProgress({
+        questStep: 2,
+        lastActive: new Date().toISOString()
+      });
+      
+      // Check if this is the third message viewed (for CTA trigger)
+      const messagesViewed = parseInt(localStorage.getItem('neuropul_viewed_messages') || '0');
+      if (messagesViewed >= 3) {
+        // Set flag for CTA
+        localStorage.setItem('neuropul_show_cta', 'true');
+      }
+      
+      // In a real implementation, you would navigate to the awakening portal or dashboard
+      // For now, we'll just redirect to the home page after a delay
+      const redirectTimeout = setTimeout(() => {
+        // Check if we should show CTA
+        if (localStorage.getItem('neuropul_show_cta') === 'true' && localStorage.getItem('neuropul_is_paid') !== 'true') {
+          // Redirect to CTA page
+          window.location.href = '/premium';
+        } else {
+          // Redirect to main app
+          window.location.href = '/';
+        }
+        
+        // Reset navigation lock
+        isNavigatingRef.current = false;
+      }, 1000);
+      
+      timeoutRefs.current.push(redirectTimeout);
+    } catch (error) {
+      console.error('Error in handleContinueToPortal:', error);
+      logError(error, {
+        component: 'TraeAwakensPage',
+        action: 'handleContinueToPortal'
+      });
+      
+      // Reset navigation lock
+      isNavigatingRef.current = false;
+    }
   };
 
   // Auto-reset session after inactivity
@@ -235,6 +305,8 @@ const TraeAwakensPage: React.FC = () => {
         }
       }
     }, 60000); // Check every minute
+    
+    timeoutRefs.current.push(inactivityTimerRef.current);
     
     // Update last activity timestamp
     localStorage.setItem('neuropul_last_activity', new Date().toISOString());

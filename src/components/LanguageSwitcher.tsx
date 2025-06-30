@@ -36,7 +36,7 @@ const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({
       // Update local state
       setLanguage(newLanguage);
       
-      // Save to localStorage
+      // Save to localStorage and update URL
       setUserLanguage(newLanguage);
       
       // Notify parent component

@@ -254,7 +254,7 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
         }, 1000);
         
         timeoutRefs.current.push(resetTimeout);
-      }, 100);
+      }, 300); // Increased delay to ensure state is saved before navigation
       
       timeoutRefs.current.push(navigationTimeout);
     } catch (error) {
@@ -338,7 +338,7 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
           }, 1000);
           
           timeoutRefs.current.push(resetTimeout);
-        }, 100);
+        }, 300); // Increased delay to ensure state is saved before navigation
         
         timeoutRefs.current.push(navigationTimeout);
       } catch (error) {

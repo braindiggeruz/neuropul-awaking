@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Brain, Zap, Skull, Rocket, PenIcon as AlienIcon } from 'lucide-react';
 import { logError } from '../lib/utils/errorLogger';
+import { getUserLanguage, setUserLanguage, translate } from '../lib/utils/i18n';
+import LanguageSwitcher from './LanguageSwitcher';
 
 interface TraeAwakensProps {
   onPathSelect: (path: 'lost' | 'awakening' | 'ready') => void;
@@ -14,38 +16,30 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
   const [showOptions, setShowOptions] = useState(false);
   const [userPath, setUserPath] = useState<string | null>(null);
   const [inactivityTimer, setInactivityTimer] = useState<NodeJS.Timeout | null>(null);
-  const [language, setLanguage] = useState<'ru' | 'uz'>('ru');
+  const [language, setLanguage] = useState<'ru' | 'uz'>(getUserLanguage());
   const [isNavigating, setIsNavigating] = useState(false);
+  
+  // Refs to prevent stale closures in event handlers
+  const isNavigatingRef = useRef(false);
+  const languageRef = useRef(language);
+
+  // Update refs when state changes
+  useEffect(() => {
+    isNavigatingRef.current = isNavigating;
+    languageRef.current = language;
+  }, [isNavigating, language]);
 
   // Determine language from URL or localStorage
   useEffect(() => {
     try {
-      // Check URL parameter first
-      const urlParams = new URLSearchParams(window.location.search);
-      const langParam = urlParams.get('lang');
-      
-      if (langParam === 'uz' || langParam === 'ru') {
-        setLanguage(langParam);
-        localStorage.setItem('neuropul_language', langParam);
-      } else {
-        // Check localStorage
-        const savedLang = localStorage.getItem('neuropul_language');
-        if (savedLang === 'uz' || savedLang === 'ru') {
-          setLanguage(savedLang);
-        } else {
-          // Try browser language
-          const browserLang = navigator.language.startsWith('uz') ? 'uz' : 'ru';
-          setLanguage(browserLang);
-          localStorage.setItem('neuropul_language', browserLang);
-        }
-      }
-      
-      console.log('Language set to:', language);
+      const detectedLanguage = getUserLanguage();
+      console.log('Initial language detection:', detectedLanguage);
+      setLanguage(detectedLanguage);
     } catch (error) {
-      console.error('Error setting language:', error);
+      console.error('Error in language detection:', error);
       logError(error, {
         component: 'TraeAwakens',
-        action: 'setLanguage'
+        action: 'languageDetection'
       });
     }
   }, []);
@@ -63,6 +57,10 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
 
   // Simulate typing effect
   useEffect(() => {
+    let typingInterval: NodeJS.Timeout;
+    let questionTimeout: NodeJS.Timeout;
+    let optionsTimeout: NodeJS.Timeout;
+    
     try {
       setIsVisible(true);
       
@@ -70,7 +68,7 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
       let currentText = '';
       let currentIndex = 0;
       
-      const typingInterval = setInterval(() => {
+      typingInterval = setInterval(() => {
         if (currentIndex < traeMessage.length) {
           currentText += traeMessage[currentIndex];
           setMessage(currentText);
@@ -80,11 +78,11 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
           setIsTyping(false);
           
           // Show the question after a short delay
-          setTimeout(() => {
+          questionTimeout = setTimeout(() => {
             setMessage(prev => `${prev}\n\n${getTraeQuestion()}`);
             
             // Show options after another delay
-            setTimeout(() => {
+            optionsTimeout = setTimeout(() => {
               setShowOptions(true);
               
               // Set inactivity timer
@@ -104,6 +102,8 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
       
       return () => {
         clearInterval(typingInterval);
+        clearTimeout(questionTimeout);
+        clearTimeout(optionsTimeout);
         if (inactivityTimer) clearTimeout(inactivityTimer);
       };
     } catch (error) {
@@ -112,6 +112,11 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
         component: 'TraeAwakens',
         action: 'typingEffect'
       });
+      
+      // Cleanup on error
+      clearInterval(typingInterval);
+      clearTimeout(questionTimeout);
+      clearTimeout(optionsTimeout);
       
       // Fallback to show options immediately
       setIsTyping(false);
@@ -173,13 +178,14 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
 
   const handleOptionClick = (path: 'lost' | 'awakening' | 'ready') => {
     // Prevent multiple clicks
-    if (isNavigating) {
+    if (isNavigatingRef.current) {
       console.log('Navigation already in progress, ignoring click');
       return;
     }
     
     console.log(`Clicked option: ${path}`);
     setIsNavigating(true);
+    isNavigatingRef.current = true;
     
     try {
       // Clear inactivity timer
@@ -200,6 +206,12 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
       setTimeout(() => {
         console.log(`Navigating to path: ${path}`);
         onPathSelect(path);
+        
+        // Reset navigation state after a delay in case the navigation fails
+        setTimeout(() => {
+          setIsNavigating(false);
+          isNavigatingRef.current = false;
+        }, 1000);
       }, 100);
     } catch (error) {
       console.error('Error in handleOptionClick:', error);
@@ -211,6 +223,7 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
       
       // Reset navigation state
       setIsNavigating(false);
+      isNavigatingRef.current = false;
     }
   };
 
@@ -219,8 +232,9 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
   const [showInput, setShowInput] = useState(false);
 
   const handleCustomInput = () => {
-    if (userInput.trim() && !isNavigating) {
+    if (userInput.trim() && !isNavigatingRef.current) {
       setIsNavigating(true);
+      isNavigatingRef.current = true;
       
       try {
         // Process user input to determine path
@@ -248,6 +262,12 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
         // Call the onPathSelect callback with a small delay
         setTimeout(() => {
           onPathSelect(detectedPath);
+          
+          // Reset navigation state after a delay in case the navigation fails
+          setTimeout(() => {
+            setIsNavigating(false);
+            isNavigatingRef.current = false;
+          }, 1000);
         }, 100);
       } catch (error) {
         console.error('Error in handleCustomInput:', error);
@@ -259,23 +279,18 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
         
         // Reset navigation state
         setIsNavigating(false);
+        isNavigatingRef.current = false;
       }
     }
   };
 
   // Language switcher
-  const toggleLanguage = () => {
+  const handleLanguageChange = (newLang: 'ru' | 'uz') => {
     try {
-      const newLang = language === 'ru' ? 'uz' : 'ru';
       console.log(`Switching language from ${language} to ${newLang}`);
       
       setLanguage(newLang);
-      localStorage.setItem('neuropul_language', newLang);
-      
-      // Update URL with language parameter
-      const url = new URL(window.location.href);
-      url.searchParams.set('lang', newLang);
-      window.history.replaceState({}, '', url.toString());
+      setUserLanguage(newLang);
       
       // Reset state to restart with new language
       setIsTyping(true);
@@ -368,13 +383,7 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
       
       {/* Language switcher */}
       <div className="absolute top-4 right-4 z-20">
-        <button 
-          onClick={toggleLanguage}
-          className="bg-black bg-opacity-50 text-white px-4 py-2 rounded-lg text-sm hover:bg-opacity-70 transition-colors"
-          aria-label={language === 'ru' ? 'Переключить на узбекский' : 'Rus tiliga o\'tish'}
-        >
-          {language === 'ru' ? 'O\'zbekcha' : 'Русский'}
-        </button>
+        <LanguageSwitcher onLanguageChange={handleLanguageChange} />
       </div>
       
       <div className="relative z-10 max-w-3xl w-full">
@@ -469,6 +478,8 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
                       className="w-full p-4 bg-gradient-to-r from-purple-900 to-blue-900 hover:from-purple-800 hover:to-blue-800 border border-purple-700 hover:border-purple-500 rounded-xl transition-all duration-300 flex items-center space-x-3 group relative overflow-hidden"
                       aria-label={language === 'ru' ? 'Хочу пробудиться' : 'Uyg\'onishni xohlayman'}
                       disabled={isNavigating}
+                      id="awakening-button"
+                      data-testid="awakening-button"
                     >
                       {/* Animated highlight effect */}
                       <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-blue-500 opacity-0 group-hover:opacity-20 transition-opacity"></div>

@@ -2,12 +2,12 @@ import { translations } from '../../constants/translations';
 
 export type Language = 'ru' | 'uz';
 
-// Get the user's preferred language from localStorage or default to 'ru'
+// Get the user's preferred language from URL, localStorage, or browser settings
 export const getUserLanguage = (): Language => {
   if (typeof window === 'undefined') return 'ru';
   
   try {
-    // Check URL parameter first
+    // Check URL parameter first (highest priority)
     const urlParams = new URLSearchParams(window.location.search);
     const urlLang = urlParams.get('lang');
     
@@ -30,6 +30,7 @@ export const getUserLanguage = (): Language => {
     }
     
     // Default to Russian
+    localStorage.setItem('neuropul_language', 'ru');
     return 'ru';
   } catch (error) {
     console.error('Error getting user language:', error);
@@ -37,19 +38,26 @@ export const getUserLanguage = (): Language => {
   }
 };
 
-// Set the user's preferred language in localStorage
+// Set the user's preferred language in localStorage and update URL
 export const setUserLanguage = (language: Language): void => {
   if (typeof window === 'undefined') return;
   
   try {
+    // Save to localStorage
     localStorage.setItem('neuropul_language', language);
+    
+    // Update URL parameter without page reload
+    const url = new URL(window.location.href);
+    url.searchParams.set('lang', language);
+    window.history.replaceState({}, '', url.toString());
+    
     console.log(`Language set to: ${language}`);
   } catch (error) {
     console.error('Error setting user language:', error);
   }
 };
 
-// Get a translated string based on the current language
+// Get a translated string based on the provided language
 export const translate = (key: string, language?: Language): string => {
   try {
     const lang = language || getUserLanguage();
@@ -66,10 +74,19 @@ export const translate = (key: string, language?: Language): string => {
       for (const k of keys) {
         fallbackValue = fallbackValue?.[k];
       }
-      return typeof fallbackValue === 'string' ? fallbackValue : key;
+      
+      if (typeof fallbackValue === 'string') {
+        console.warn(`Missing Uzbek translation for key: ${key}, using Russian fallback`);
+        return fallbackValue;
+      }
     }
     
-    return typeof value === 'string' ? value : key;
+    if (typeof value === 'string') {
+      return value;
+    }
+    
+    console.warn(`Translation key not found: ${key}`);
+    return key;
   } catch (error) {
     console.error('Translation error:', error);
     return key;
@@ -104,4 +121,9 @@ export const hasTranslation = (key: string, language: Language): boolean => {
     console.error('Translation check error:', error);
     return false;
   }
+};
+
+// Get all available languages
+export const getAvailableLanguages = (): Language[] => {
+  return ['ru', 'uz'];
 };

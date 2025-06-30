@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Brain, ArrowRight, Zap, Sparkles } from 'lucide-react';
 import { logError } from '../lib/utils/errorLogger';
+import { getUserLanguage, translate } from '../lib/utils/i18n';
+import LanguageSwitcher from './LanguageSwitcher';
 
 interface ResponseAwakeningProps {
   onContinue: () => void;
@@ -15,37 +17,31 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
   const [showContinue, setShowContinue] = useState(false);
   const [userName, setUserName] = useState('');
   const [xp, setXp] = useState(0);
-  const [language, setLanguage] = useState<'ru' | 'uz'>('ru');
+  const [language, setLanguage] = useState<'ru' | 'uz'>(getUserLanguage());
   const [isNavigating, setIsNavigating] = useState(false);
+  
+  // Refs to prevent stale closures in event handlers
+  const isNavigatingRef = useRef(false);
+  const languageRef = useRef(language);
+
+  // Update refs when state changes
+  useEffect(() => {
+    isNavigatingRef.current = isNavigating;
+    languageRef.current = language;
+  }, [isNavigating, language]);
 
   // Load language preference
   useEffect(() => {
     try {
-      const urlParams = new URLSearchParams(window.location.search);
-      const langParam = urlParams.get('lang');
-      
-      if (langParam === 'uz' || langParam === 'ru') {
-        setLanguage(langParam);
-        console.log(`Language set from URL: ${langParam}`);
-      } else {
-        const savedLang = localStorage.getItem('neuropul_language');
-        if (savedLang === 'uz' || savedLang === 'ru') {
-          setLanguage(savedLang);
-          console.log(`Language set from localStorage: ${savedLang}`);
-        } else {
-          // Default to Russian
-          setLanguage('ru');
-          console.log('Language defaulted to Russian');
-        }
-      }
+      const detectedLanguage = getUserLanguage();
+      console.log('Initial language detection:', detectedLanguage);
+      setLanguage(detectedLanguage);
     } catch (error) {
-      console.error('Error loading language preference:', error);
+      console.error('Error in language detection:', error);
       logError(error, {
         component: 'ResponseAwakening',
-        action: 'loadLanguage'
+        action: 'languageDetection'
       });
-      // Default to Russian on error
-      setLanguage('ru');
     }
   }, []);
 
@@ -58,6 +54,8 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
 
   // Simulate typing effect
   useEffect(() => {
+    let typingInterval: NodeJS.Timeout;
+    
     try {
       setIsVisible(true);
       
@@ -72,7 +70,7 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
       let currentText = '';
       let currentIndex = 0;
       
-      const typingInterval = setInterval(() => {
+      typingInterval = setInterval(() => {
         if (currentIndex < traeMessage.length) {
           currentText += traeMessage[currentIndex];
           setMessage(currentText);
@@ -98,13 +96,18 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
         }
       }, 20); // Typing speed
       
-      return () => clearInterval(typingInterval);
+      return () => {
+        clearInterval(typingInterval);
+      };
     } catch (error) {
       console.error('Error in typing effect:', error);
       logError(error, {
         component: 'ResponseAwakening',
         action: 'typingEffect'
       });
+      
+      // Cleanup on error
+      clearInterval(typingInterval);
       
       // Fallback to show message immediately
       setMessage(getTraeMessage());
@@ -169,13 +172,14 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
 
   const handleContinue = () => {
     try {
-      if (isNavigating) {
+      if (isNavigatingRef.current) {
         console.log('Navigation already in progress, ignoring');
         return;
       }
       
       console.log('Continue button clicked');
       setIsNavigating(true);
+      isNavigatingRef.current = true;
       
       playSound('click');
       vibrate([50, 30, 50]);
@@ -197,6 +201,12 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
       // Call onContinue with a small delay
       setTimeout(() => {
         onContinue();
+        
+        // Reset navigation state after a delay in case the navigation fails
+        setTimeout(() => {
+          setIsNavigating(false);
+          isNavigatingRef.current = false;
+        }, 1000);
       }, 100);
     } catch (error) {
       console.error('Error in handleContinue:', error);
@@ -207,18 +217,20 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
       
       // Reset navigation state
       setIsNavigating(false);
+      isNavigatingRef.current = false;
     }
   };
 
   const handleBack = () => {
     try {
-      if (isNavigating) {
+      if (isNavigatingRef.current) {
         console.log('Navigation already in progress, ignoring');
         return;
       }
       
       console.log('Back button clicked');
       setIsNavigating(true);
+      isNavigatingRef.current = true;
       
       playSound('click');
       vibrate([30]);
@@ -226,6 +238,12 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
       // Call onBack with a small delay
       setTimeout(() => {
         onBack();
+        
+        // Reset navigation state after a delay in case the navigation fails
+        setTimeout(() => {
+          setIsNavigating(false);
+          isNavigatingRef.current = false;
+        }, 1000);
       }, 100);
     } catch (error) {
       console.error('Error in handleBack:', error);
@@ -236,6 +254,7 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
       
       // Reset navigation state
       setIsNavigating(false);
+      isNavigatingRef.current = false;
     }
   };
 
@@ -263,6 +282,46 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
       logError(error, {
         component: 'ResponseAwakening',
         action: 'handleNameSubmit'
+      });
+    }
+  };
+
+  // Language change handler
+  const handleLanguageChange = (newLang: 'ru' | 'uz') => {
+    try {
+      console.log(`Language changed from ${language} to ${newLang}`);
+      setLanguage(newLang);
+      
+      // Reset message and typing state to show message in new language
+      setIsTyping(true);
+      setMessage('');
+      setShowContinue(false);
+      
+      // Restart typing effect with new language
+      const traeMessage = getTraeMessage();
+      let currentText = '';
+      let currentIndex = 0;
+      
+      const typingInterval = setInterval(() => {
+        if (currentIndex < traeMessage.length) {
+          currentText += traeMessage[currentIndex];
+          setMessage(currentText);
+          currentIndex++;
+        } else {
+          clearInterval(typingInterval);
+          setIsTyping(false);
+          
+          // Show continue button after message is fully typed
+          setTimeout(() => {
+            setShowContinue(true);
+          }, 500);
+        }
+      }, 20);
+    } catch (error) {
+      console.error('Error changing language:', error);
+      logError(error, {
+        component: 'ResponseAwakening',
+        action: 'handleLanguageChange'
       });
     }
   };
@@ -315,22 +374,7 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
       
       {/* Language switcher */}
       <div className="absolute top-4 right-4 z-20">
-        <button 
-          onClick={() => {
-            const newLang = language === 'ru' ? 'uz' : 'ru';
-            setLanguage(newLang);
-            localStorage.setItem('neuropul_language', newLang);
-            // Update URL with language parameter
-            const url = new URL(window.location.href);
-            url.searchParams.set('lang', newLang);
-            window.history.replaceState({}, '', url.toString());
-          }}
-          className="bg-black bg-opacity-50 text-white px-4 py-2 rounded-lg text-sm hover:bg-opacity-70 transition-colors"
-          aria-label={language === 'ru' ? 'Переключить на узбекский' : 'Rus tiliga o\'tish'}
-          disabled={isNavigating}
-        >
-          {language === 'ru' ? 'O\'zbekcha' : 'Русский'}
-        </button>
+        <LanguageSwitcher onLanguageChange={handleLanguageChange} />
       </div>
       
       <div className="relative z-10 max-w-3xl w-full">
@@ -441,7 +485,7 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
                   >
                     <h3 className="text-cyan-400 font-semibold mb-4 flex items-center font-['Orbitron',sans-serif]">
                       <Sparkles className="w-5 h-5 mr-2" />
-                      {language === 'ru' ? 'Путь пробуждения:' : 'Uyg\'onish yo\'li:'}
+                      {translate('awakeningPath', language)}
                     </h3>
                     <div className="relative">
                       <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-gradient-to-b from-purple-500 via-blue-500 to-cyan-500"></div>
@@ -455,12 +499,10 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
                         >
                           <div className="absolute -left-10 top-1 w-4 h-4 rounded-full bg-purple-500 shadow-[0_0_10px_rgba(139,92,246,0.7)]"></div>
                           <h4 className="text-white font-semibold font-['Orbitron',sans-serif]">
-                            {language === 'ru' ? 'Определение архетипа' : 'Arxetipni aniqlash'}
+                            {translate('archetypeDetermination', language)}
                           </h4>
                           <p className="text-gray-300 text-sm">
-                            {language === 'ru' 
-                              ? 'Узнай, кто ты: Воин, Маг, Искатель или Тень' 
-                              : 'Kim ekanligingizni bilib oling: Jangchi, Sehrgar, Izlovchi yoki Soya'}
+                            {translate('archetypeDesc', language)}
                           </p>
                         </motion.div>
                         
@@ -472,12 +514,10 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
                         >
                           <div className="absolute -left-10 top-1 w-4 h-4 rounded-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.7)]"></div>
                           <h4 className="text-white font-semibold font-['Orbitron',sans-serif]">
-                            {language === 'ru' ? 'Получение пророчества' : 'Bashorat olish'}
+                            {translate('getProphecy', language)}
                           </h4>
                           <p className="text-gray-300 text-sm">
-                            {language === 'ru' 
-                              ? 'Персональное предсказание твоего AI-пути' 
-                              : 'AI yo\'lingizning shaxsiy bashorati'}
+                            {translate('prophecyDesc', language)}
                           </p>
                         </motion.div>
                         
@@ -489,12 +529,10 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
                         >
                           <div className="absolute -left-10 top-1 w-4 h-4 rounded-full bg-cyan-500 shadow-[0_0_10px_rgba(6,182,212,0.7)]"></div>
                           <h4 className="text-white font-semibold font-['Orbitron',sans-serif]">
-                            {language === 'ru' ? 'Доступ к инструментам' : 'Vositalarga kirish'}
+                            {translate('toolsAccess', language)}
                           </h4>
                           <p className="text-gray-300 text-sm">
-                            {language === 'ru' 
-                              ? 'Разблокировка AI-инструментов для твоего архетипа' 
-                              : 'Arxetipingiz uchun AI vositalarini ochish'}
+                            {translate('toolsDesc', language)}
                           </p>
                         </motion.div>
                       </div>
@@ -515,9 +553,9 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
                     <div className="bg-gradient-to-r from-purple-500 to-cyan-500 h-full w-1/3 rounded-full"></div>
                   </div>
                   <div className="flex justify-between text-xs text-gray-500 mt-1">
-                    <span>{language === 'ru' ? 'Начало' : 'Boshlanish'}</span>
-                    <span>{language === 'ru' ? 'Пробуждение' : 'Uyg\'onish'}</span>
-                    <span>{language === 'ru' ? 'Мастерство' : 'Mahorat'}</span>
+                    <span>{translate('beginning', language)}</span>
+                    <span>{translate('awakening', language)}</span>
+                    <span>{translate('mastery', language)}</span>
                   </div>
                 </motion.div>
               )}
@@ -535,30 +573,30 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
                       onClick={handleBack}
                       onMouseEnter={() => playSound('hover')}
                       className="px-6 py-3 bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white rounded-lg transition-colors flex items-center justify-center space-x-2 border border-gray-700 hover:border-purple-500 group relative overflow-hidden"
-                      aria-label={language === 'ru' ? 'Назад' : 'Orqaga'}
+                      aria-label={translate('back', language)}
                       disabled={isNavigating}
                     >
                       {/* Button hover effect */}
                       <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-blue-600 opacity-0 group-hover:opacity-10 transition-opacity"></div>
                       
                       <ArrowRight className="w-5 h-5 rotate-180" />
-                      <span>{language === 'ru' ? 'Назад' : 'Orqaga'}</span>
+                      <span>{translate('back', language)}</span>
                     </button>
                     
                     <button
                       onClick={handleContinue}
                       onMouseEnter={() => playSound('hover')}
                       className="flex-1 px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-lg transition-colors flex items-center justify-center space-x-2 relative overflow-hidden group"
-                      aria-label={language === 'ru' ? 'Начать пробуждение' : 'Uyg\'onishni boshlash'}
+                      aria-label={translate('startAwakening', language)}
                       disabled={isNavigating}
+                      id="start-awakening-button"
+                      data-testid="start-awakening-button"
                     >
                       {/* Button glow effect */}
                       <div className="absolute -inset-1 bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg blur opacity-30 group-hover:opacity-50 transition-opacity"></div>
                       <div className="relative z-10 flex items-center justify-center space-x-2">
                         <Zap className="w-5 h-5" />
-                        <span>
-                          {language === 'ru' ? 'Начать пробуждение' : 'Uyg\'onishni boshlash'}
-                        </span>
+                        <span>{translate('startAwakening', language)}</span>
                         <ArrowRight className="w-5 h-5" />
                       </div>
                     </button>

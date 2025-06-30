@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import TraeAwakens from '../components/TraeAwakens';
 import ResponseLostSoul from '../components/ResponseLostSoul';
 import ResponseAwakening from '../components/ResponseAwakening';
@@ -6,6 +6,8 @@ import ResponseHackerReady from '../components/ResponseHackerReady';
 import { AnimatePresence, motion } from 'framer-motion';
 import { logError } from '../lib/utils/errorLogger';
 import ErrorBoundary from '../components/ErrorBoundary';
+import { getUserLanguage, setUserLanguage } from '../lib/utils/i18n';
+import LanguageSwitcher from '../components/LanguageSwitcher';
 
 type Screen = 'intro' | 'lost' | 'awakening' | 'ready' | 'portal';
 
@@ -14,9 +16,19 @@ const TraeAwakensPage: React.FC = () => {
   const [userPath, setUserPath] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<string>('');
   const [viewCount, setViewCount] = useState(0);
-  const [language, setLanguage] = useState<'ru' | 'uz'>('ru');
+  const [language, setLanguage] = useState<'ru' | 'uz'>(getUserLanguage());
   const [isNavigating, setIsNavigating] = useState(false);
   const [navigationError, setNavigationError] = useState<string | null>(null);
+  
+  // Refs to prevent stale closures in event handlers
+  const isNavigatingRef = useRef(false);
+  const currentScreenRef = useRef<Screen>('intro');
+
+  // Update refs when state changes
+  useEffect(() => {
+    isNavigatingRef.current = isNavigating;
+    currentScreenRef.current = currentScreen;
+  }, [isNavigating, currentScreen]);
 
   // Initialize session and tracking
   useEffect(() => {
@@ -24,26 +36,9 @@ const TraeAwakensPage: React.FC = () => {
       console.log('Initializing TraeAwakensPage');
       
       // Load language preference
-      const urlParams = new URLSearchParams(window.location.search);
-      const langParam = urlParams.get('lang');
-      
-      if (langParam === 'uz' || langParam === 'ru') {
-        setLanguage(langParam);
-        localStorage.setItem('neuropul_language', langParam);
-        console.log(`Language set from URL: ${langParam}`);
-      } else {
-        const savedLang = localStorage.getItem('neuropul_language');
-        if (savedLang === 'uz' || savedLang === 'ru') {
-          setLanguage(savedLang);
-          console.log(`Language set from localStorage: ${savedLang}`);
-        } else {
-          // Try browser language
-          const browserLang = navigator.language.startsWith('uz') ? 'uz' : 'ru';
-          setLanguage(browserLang);
-          localStorage.setItem('neuropul_language', browserLang);
-          console.log(`Language set from browser: ${browserLang}`);
-        }
-      }
+      const detectedLanguage = getUserLanguage();
+      setLanguage(detectedLanguage);
+      console.log(`Language set: ${detectedLanguage}`);
       
       // Generate session ID if not exists
       const existingSessionId = localStorage.getItem('neuropul_session_id');
@@ -94,6 +89,16 @@ const TraeAwakensPage: React.FC = () => {
         localStorage.setItem('neuropul_is_paid', 'false');
       }
       
+      // Set default sound settings
+      if (!localStorage.getItem('neuropul_sound_enabled')) {
+        localStorage.setItem('neuropul_sound_enabled', 'true');
+      }
+      
+      // Set default vibration settings
+      if (!localStorage.getItem('neuropul_vibration_enabled')) {
+        localStorage.setItem('neuropul_vibration_enabled', 'true');
+      }
+      
       console.log('TraeAwakensPage initialization complete');
     } catch (error) {
       console.error('Error initializing TraeAwakensPage:', error);
@@ -106,13 +111,19 @@ const TraeAwakensPage: React.FC = () => {
 
   const handlePathSelect = (path: 'lost' | 'awakening' | 'ready') => {
     try {
-      if (isNavigating) {
+      if (isNavigatingRef.current) {
         console.log('Navigation already in progress, ignoring');
         return;
       }
       
       console.log(`Path selected: ${path}`);
       setIsNavigating(true);
+      isNavigatingRef.current = true;
+      
+      // Clear any previous errors
+      setNavigationError(null);
+      
+      // Set current screen based on path
       setCurrentScreen(path);
       setUserPath(path);
       
@@ -131,6 +142,7 @@ const TraeAwakensPage: React.FC = () => {
       // Reset navigation state after a delay
       setTimeout(() => {
         setIsNavigating(false);
+        isNavigatingRef.current = false;
       }, 500);
     } catch (error) {
       console.error('Error in handlePathSelect:', error);
@@ -142,23 +154,31 @@ const TraeAwakensPage: React.FC = () => {
       
       setNavigationError('Ошибка при выборе пути. Пожалуйста, попробуйте снова.');
       setIsNavigating(false);
+      isNavigatingRef.current = false;
     }
   };
 
   const handleBack = () => {
     try {
-      if (isNavigating) {
+      if (isNavigatingRef.current) {
         console.log('Navigation already in progress, ignoring');
         return;
       }
       
       console.log('User navigated back to intro');
       setIsNavigating(true);
+      isNavigatingRef.current = true;
+      
+      // Clear any previous errors
+      setNavigationError(null);
+      
+      // Set current screen to intro
       setCurrentScreen('intro');
       
       // Reset navigation state after a delay
       setTimeout(() => {
         setIsNavigating(false);
+        isNavigatingRef.current = false;
       }, 500);
     } catch (error) {
       console.error('Error in handleBack:', error);
@@ -169,12 +189,13 @@ const TraeAwakensPage: React.FC = () => {
       
       setNavigationError('Ошибка при возврате. Пожалуйста, попробуйте снова.');
       setIsNavigating(false);
+      isNavigatingRef.current = false;
     }
   };
 
   const handleContinueToPortal = () => {
     try {
-      if (isNavigating) {
+      if (isNavigatingRef.current) {
         console.log('Navigation already in progress, ignoring');
         return;
       }
@@ -183,6 +204,12 @@ const TraeAwakensPage: React.FC = () => {
       console.log(`Final path: ${userPath}`);
       
       setIsNavigating(true);
+      isNavigatingRef.current = true;
+      
+      // Clear any previous errors
+      setNavigationError(null);
+      
+      // Set current screen to portal
       setCurrentScreen('portal');
       
       // Set completion flag
@@ -199,13 +226,28 @@ const TraeAwakensPage: React.FC = () => {
       // In a real implementation, you would navigate to the awakening portal or dashboard
       // For now, we'll just redirect to the home page after a delay
       setTimeout(() => {
-        // Check if we should show CTA
-        if (localStorage.getItem('neuropul_show_cta') === 'true' && localStorage.getItem('neuropul_is_paid') !== 'true') {
-          // Redirect to CTA page
-          window.location.href = '/premium';
-        } else {
-          // Redirect to main app
-          window.location.href = '/';
+        try {
+          // Check if we should show CTA
+          if (localStorage.getItem('neuropul_show_cta') === 'true' && localStorage.getItem('neuropul_is_paid') !== 'true') {
+            // Redirect to CTA page
+            console.log('Redirecting to premium page');
+            window.location.href = '/premium';
+          } else {
+            // Redirect to main app
+            console.log('Redirecting to main app');
+            window.location.href = '/';
+          }
+        } catch (redirectError) {
+          console.error('Error during redirect:', redirectError);
+          logError(redirectError, {
+            component: 'TraeAwakensPage',
+            action: 'redirect'
+          });
+          
+          // Reset navigation state
+          setIsNavigating(false);
+          isNavigatingRef.current = false;
+          setNavigationError('Ошибка при переходе. Пожалуйста, обновите страницу.');
         }
       }, 2000);
     } catch (error) {
@@ -217,6 +259,22 @@ const TraeAwakensPage: React.FC = () => {
       
       setNavigationError('Ошибка при переходе к порталу. Пожалуйста, попробуйте снова.');
       setIsNavigating(false);
+      isNavigatingRef.current = false;
+    }
+  };
+
+  // Handle language change
+  const handleLanguageChange = (newLang: 'ru' | 'uz') => {
+    try {
+      console.log(`Language changed from ${language} to ${newLang}`);
+      setLanguage(newLang);
+      setUserLanguage(newLang);
+    } catch (error) {
+      console.error('Error changing language:', error);
+      logError(error, {
+        component: 'TraeAwakensPage',
+        action: 'handleLanguageChange'
+      });
     }
   };
 
@@ -252,6 +310,11 @@ const TraeAwakensPage: React.FC = () => {
   return (
     <ErrorBoundary>
       <div className="relative min-h-screen overflow-hidden">
+        {/* Language switcher (global) */}
+        <div className="absolute top-4 right-4 z-50">
+          <LanguageSwitcher onLanguageChange={handleLanguageChange} />
+        </div>
+        
         <AnimatePresence mode="wait">
           {currentScreen === 'intro' && (
             <motion.div
@@ -337,6 +400,19 @@ const TraeAwakensPage: React.FC = () => {
                 ✕
               </button>
             </div>
+          </div>
+        )}
+        
+        {/* Debug Panel (only in development) */}
+        {process.env.NODE_ENV === 'development' && (
+          <div className="fixed bottom-4 left-4 bg-black bg-opacity-80 text-white p-4 rounded-lg z-50 text-xs">
+            <div className="font-bold mb-2">Debug Info:</div>
+            <div>Screen: {currentScreen}</div>
+            <div>Path: {userPath || 'none'}</div>
+            <div>Language: {language}</div>
+            <div>Navigating: {isNavigating ? 'yes' : 'no'}</div>
+            <div>Session: {sessionId.substring(0, 8)}...</div>
+            <div>Views: {viewCount}</div>
           </div>
         )}
         

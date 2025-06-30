@@ -151,9 +151,11 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
     return () => {
       // Clear all timeouts
       timeoutRefs.current.forEach(timeout => clearTimeout(timeout));
+      timeoutRefs.current = [];
       
       if (inactivityTimerRef.current) {
         clearTimeout(inactivityTimerRef.current);
+        inactivityTimerRef.current = null;
       }
       
       // Clean up audio resources

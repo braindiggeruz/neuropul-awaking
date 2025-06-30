@@ -1,154 +1,145 @@
 # NeuropulAI Deployment Guide
 
-## Overview
+This document provides instructions for deploying the NeuropulAI application to various hosting platforms.
 
-This document provides instructions for deploying the NeuropulAI application in both local development and production environments.
+## Prerequisites
 
-## Local Development
+- Node.js 20 or later
+- npm 10 or later
+- Git (optional, for version control)
 
-### Prerequisites
+## Environment Setup
 
-- Node.js 20.x or higher
-- npm 10.x or higher
+The application requires several environment variables to function properly. These are set in the `.env` file for local development and in the hosting platform's environment settings for production.
 
-### Setup
-
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/your-org/neuropul-ai.git
-   cd neuropul-ai
-   ```
-
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-
-3. Create a `.env.local` file based on `.env.example`:
-   ```bash
-   cp .env.example .env.local
-   ```
-
-4. Edit `.env.local` to add your API keys and configuration.
-
-5. Start the development server:
-   ```bash
-   npm run dev
-   ```
-
-6. The application will be available at `http://localhost:5173`
-
-## Production Deployment
-
-### Building for Production
-
-1. Ensure all environment variables are set in `.env.production`:
-   ```
-   APP_ENV=production
-   ENABLE_DEBUG=false
-   DISABLE_PDF_GEN=false
-   DEFAULT_LANGUAGE=ru
-   TIMEOUT=30000
-   CHECK_STATUS=true
-   ERROR_LOGGER=true
-   ```
-
-2. Build the application:
-   ```bash
-   npm run build
-   ```
-
-3. The production build will be available in the `dist` directory.
-
-### Deploying to Netlify
-
-1. Install the Netlify CLI:
-   ```bash
-   npm install -g netlify-cli
-   ```
-
-2. Login to Netlify:
-   ```bash
-   netlify login
-   ```
-
-3. Deploy to Netlify:
-   ```bash
-   netlify deploy --prod
-   ```
-
-4. When prompted, specify `dist` as the publish directory.
-
-### Deploying to Vercel
-
-1. Install the Vercel CLI:
-   ```bash
-   npm install -g vercel
-   ```
-
-2. Login to Vercel:
-   ```bash
-   vercel login
-   ```
-
-3. Deploy to Vercel:
-   ```bash
-   vercel --prod
-   ```
-
-### Deploying to Firebase
-
-1. Install the Firebase CLI:
-   ```bash
-   npm install -g firebase-tools
-   ```
-
-2. Login to Firebase:
-   ```bash
-   firebase login
-   ```
-
-3. Initialize Firebase (if not already done):
-   ```bash
-   firebase init hosting
-   ```
-
-4. Deploy to Firebase:
-   ```bash
-   firebase deploy --only hosting
-   ```
-
-## Environment Variables
-
-The following environment variables are required for production:
-
+Key environment variables:
 - `VITE_SUPABASE_URL`: Your Supabase project URL
 - `VITE_SUPABASE_ANON_KEY`: Your Supabase anonymous key
-- `SUPABASE_SERVICE_ROLE_KEY`: Your Supabase service role key
+- `SUPABASE_SERVICE_ROLE_KEY`: Your Supabase service role key (for serverless functions)
 - `OPENAI_API_KEY`: Your OpenAI API key
+- `APP_ENV`: Set to "production" for production deployments
+- `DEFAULT_LANGUAGE`: Default language for the application (ru/uz)
+
+## Build Process
+
+To build the application for production:
+
+```bash
+# Install dependencies
+npm install
+
+# Build the application
+npm run build
+```
+
+This will create a `dist` directory containing the compiled application.
+
+## Deployment Options
+
+### Netlify (Recommended)
+
+1. **Using Netlify CLI**:
+
+```bash
+# Install Netlify CLI
+npm install -g netlify-cli
+
+# Login to Netlify
+netlify login
+
+# Initialize a new site (first time only)
+netlify init
+
+# Deploy to production
+netlify deploy --prod
+```
+
+2. **Using Netlify UI**:
+   - Connect your GitHub repository to Netlify
+   - Set build command to `npm run build`
+   - Set publish directory to `dist`
+   - Configure environment variables in the Netlify dashboard
+
+### Vercel
+
+1. **Using Vercel CLI**:
+
+```bash
+# Install Vercel CLI
+npm install -g vercel
+
+# Login to Vercel
+vercel login
+
+# Deploy to production
+vercel --prod
+```
+
+2. **Using Vercel UI**:
+   - Connect your GitHub repository to Vercel
+   - Set build command to `npm run build`
+   - Set output directory to `dist`
+   - Configure environment variables in the Vercel dashboard
 
 ## Post-Deployment Verification
 
 After deploying, verify the following:
 
-1. The application loads correctly
-2. Language switching works
-3. All animations and transitions are smooth
-4. XP system works and persists
-5. Error handling works correctly
-6. All API endpoints are accessible
-7. Responsive design works on all devices
+1. **Application loads correctly**: Visit the deployed URL and ensure the application loads without errors
+2. **API endpoints work**: Test the API endpoints to ensure they're functioning correctly
+3. **Authentication works**: Test user authentication flows
+4. **Language switching works**: Test switching between Russian and Uzbek
+5. **XP system works**: Verify that XP is awarded and stored correctly
+6. **PDF generation works**: Test the PDF generation functionality
 
 ## Troubleshooting
 
-If you encounter issues during deployment:
+### Common Issues
 
-1. Check the browser console for errors
-2. Verify all environment variables are set correctly
-3. Check the network tab for failed API requests
-4. Ensure all required dependencies are installed
-5. Check the build logs for any compilation errors
+1. **API endpoints return 404**:
+   - Check that the redirects in `netlify.toml` or `vercel.json` are configured correctly
 
-## Support
+2. **Environment variables not working**:
+   - Verify that all required environment variables are set in the hosting platform's dashboard
+   - For Netlify, check the "Environment" section in the site settings
+   - For Vercel, check the "Environment Variables" section in the project settings
 
-For additional support, contact the NeuropulAI development team at support@neuropul.ai
+3. **PDF generation fails**:
+   - Check that the `html2canvas` and `jspdf` dependencies are correctly included in the build
+   - Verify that the serverless function for PDF generation has the correct permissions
+
+4. **Supabase connection issues**:
+   - Verify that the Supabase URL and keys are correct
+   - Check that the Supabase project is active and accessible
+
+## Maintenance
+
+### Updating the Application
+
+To update the deployed application:
+
+1. Make changes to the codebase
+2. Test locally using `npm run dev`
+3. Build the application using `npm run build`
+4. Deploy using the same method as the initial deployment
+
+### Monitoring
+
+- Use the hosting platform's built-in monitoring tools to track application performance
+- Check error logs regularly for any issues
+- Monitor API usage to ensure you stay within limits
+
+## Current Deployment Status
+
+- **Production URL**: https://neuropul.ai
+- **Staging URL**: https://staging.neuropul.ai
+- **Last Deployed**: [Date of last deployment]
+- **Deployed By**: [Name of deployer]
+
+## Known Issues
+
+- None at this time
+
+## Contact
+
+For deployment issues or questions, contact the development team at [contact email].

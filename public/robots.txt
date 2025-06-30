@@ -1,6 +1,5 @@
-# Allow all crawlers
+# https://www.robotstxt.org/robotstxt.html
 User-agent: *
 Allow: /
 
-# Sitemap location
 Sitemap: https://neuropul.ai/sitemap.xml

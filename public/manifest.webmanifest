@@ -1,0 +1,58 @@
+{
+  "name": "NeuropulAI - Твой путь к AI-мастерству",
+  "short_name": "NeuropulAI",
+  "description": "Геймифицированный AI-портал для изучения и использования искусственного интеллекта",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1a1a2e",
+  "theme_color": "#1a1a2e",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/maskable-icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Пробуждение",
+      "short_name": "Пробуждение",
+      "description": "Начать путь пробуждения",
+      "url": "/awakening",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Дашборд",
+      "short_name": "Дашборд",
+      "description": "Перейти к дашборду",
+      "url": "/dashboard",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    }
+  ],
+  "lang": "ru",
+  "dir": "ltr",
+  "categories": ["education", "productivity", "utilities"],
+  "screenshots": [
+    {
+      "src": "/screenshot-1.jpg",
+      "sizes": "1280x720",
+      "type": "image/jpeg"
+    },
+    {
+      "src": "/screenshot-2.jpg",
+      "sizes": "1280x720",
+      "type": "image/jpeg"
+    }
+  ]
+}

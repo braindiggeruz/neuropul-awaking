@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { CheckCircle, XCircle, AlertTriangle, RefreshCw, Zap, Database, Globe, Shield, Cpu, HardDrive, FileText } from 'lucide-react';
 import { analyzeFallbackArchetype } from '../lib/api/callGpt';
@@ -81,7 +81,7 @@ const SystemHealthCheck: React.FC<SystemHealthCheckProps> = ({ onClose }) => {
     }
   ];
 
-  const runHealthCheck = async () => {
+  const runHealthCheck = useCallback(async () => {
     setIsRunning(true);
     setChecks(initialChecks);
     setArchetypeTestResult(null);
@@ -145,7 +145,7 @@ const SystemHealthCheck: React.FC<SystemHealthCheckProps> = ({ onClose }) => {
     
     setOverallStatus(hasErrors ? 'error' : hasWarnings ? 'warning' : 'healthy');
     setIsRunning(false);
-  };
+  }, []);
 
   const checkEnvironment = async (check: HealthCheck): Promise<HealthCheck> => {
     try {
@@ -718,7 +718,12 @@ const SystemHealthCheck: React.FC<SystemHealthCheckProps> = ({ onClose }) => {
 
   useEffect(() => {
     runHealthCheck();
-  }, []);
+    
+    // Cleanup function
+    return () => {
+      // Any cleanup needed
+    };
+  }, [runHealthCheck]);
 
   const getStatusIcon = (status: HealthCheck['status']) => {
     switch (status) {
@@ -771,6 +776,7 @@ const SystemHealthCheck: React.FC<SystemHealthCheckProps> = ({ onClose }) => {
             <button
               onClick={onClose}
               className="text-gray-400 hover:text-white transition-colors p-2 hover:bg-white hover:bg-opacity-10 rounded-lg"
+              aria-label="Close health check"
             >
               ✕
             </button>
@@ -801,6 +807,7 @@ const SystemHealthCheck: React.FC<SystemHealthCheckProps> = ({ onClose }) => {
                   ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
                   : 'bg-blue-600 hover:bg-blue-700 text-white'
               }`}
+              aria-label="Run health check again"
             >
               <div className="flex items-center space-x-2">
                 <RefreshCw className={`w-4 h-4 ${isRunning ? 'animate-spin' : ''}`} />
@@ -894,6 +901,7 @@ const SystemHealthCheck: React.FC<SystemHealthCheckProps> = ({ onClose }) => {
                 }
               }}
               className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
+              aria-label="Run local archetype test"
             >
               Run Local Test
             </button>
@@ -908,6 +916,7 @@ const SystemHealthCheck: React.FC<SystemHealthCheckProps> = ({ onClose }) => {
           <button
             onClick={onClose}
             className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
+            aria-label="Close health check"
           >
             Close
           </button>

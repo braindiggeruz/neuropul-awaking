@@ -1,5 +1,6 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { logError } from '../lib/utils/errorLogger';
+import { getUserLanguage } from '../lib/utils/i18n';
 
 interface Props {
   children: ReactNode;
@@ -62,23 +63,30 @@ class ErrorBoundary extends Component<Props, State> {
 
   render(): ReactNode {
     if (this.state.hasError) {
+      // Get user language
+      const language = getUserLanguage();
+      
       // Custom fallback UI
       return this.props.fallback || (
         <div className="min-h-screen bg-gradient-to-br from-red-900 via-purple-900 to-blue-900 flex items-center justify-center p-4">
           <div className="bg-black bg-opacity-50 rounded-xl p-8 max-w-md text-center">
             <div className="text-6xl mb-4">⚠️</div>
-            <h2 className="text-2xl font-bold text-white mb-4">Что-то пошло не так</h2>
+            <h2 className="text-2xl font-bold text-white mb-4">
+              {language === 'ru' ? 'Что-то пошло не так' : 'Nimadir noto\'g\'ri bajarildi'}
+            </h2>
             <p className="text-gray-300 mb-6">
-              Произошла ошибка в приложении. Пожалуйста, обновите страницу.
+              {language === 'ru' 
+                ? 'Произошла ошибка в приложении. Пожалуйста, обновите страницу.' 
+                : 'Ilovada xatolik yuz berdi. Iltimos, sahifani yangilang.'}
             </p>
             <p className="text-red-400 text-sm mb-6 bg-red-900 bg-opacity-30 p-3 rounded-lg">
-              {this.state.error?.message || 'Неизвестная ошибка'}
+              {this.state.error?.message || (language === 'ru' ? 'Неизвестная ошибка' : 'Noma\'lum xato')}
             </p>
             <button
               onClick={() => window.location.reload()}
               className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg transition-colors"
             >
-              Обновить страницу
+              {language === 'ru' ? 'Обновить страницу' : 'Sahifani yangilash'}
             </button>
           </div>
         </div>

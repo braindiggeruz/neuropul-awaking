@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { getUserLanguage, setUserLanguage, Language } from '../lib/utils/i18n';
+import { logError } from '../lib/utils/errorLogger';
 
 interface LanguageSwitcherProps {
   onLanguageChange?: (language: Language) => void;
@@ -20,26 +21,34 @@ const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({
   }, []);
 
   const toggleLanguage = () => {
-    if (isChanging) return;
-    
-    setIsChanging(true);
-    const newLanguage: Language = language === 'ru' ? 'uz' : 'ru';
-    
-    // Update local state
-    setLanguage(newLanguage);
-    
-    // Save to localStorage
-    setUserLanguage(newLanguage);
-    
-    // Notify parent component
-    if (onLanguageChange) {
-      onLanguageChange(newLanguage);
-    }
-    
-    // Add a small delay to prevent rapid toggling
-    setTimeout(() => {
+    try {
+      if (isChanging) return;
+      
+      setIsChanging(true);
+      const newLanguage: Language = language === 'ru' ? 'uz' : 'ru';
+      
+      // Update local state
+      setLanguage(newLanguage);
+      
+      // Save to localStorage
+      setUserLanguage(newLanguage);
+      
+      // Notify parent component
+      if (onLanguageChange) {
+        onLanguageChange(newLanguage);
+      }
+      
+      // Add a small delay to prevent rapid toggling
+      setTimeout(() => {
+        setIsChanging(false);
+      }, 500);
+    } catch (error) {
+      logError(error, {
+        component: 'LanguageSwitcher',
+        action: 'toggleLanguage'
+      });
       setIsChanging(false);
-    }, 500);
+    }
   };
 
   return (

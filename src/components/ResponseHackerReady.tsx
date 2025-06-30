@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Brain, ArrowRight, Code, Zap, Terminal, Lock } from 'lucide-react';
-import { getUserLanguage, setUserLanguage } from '../lib/utils/i18n';
+import { getUserLanguage, setUserLanguage, translate } from '../lib/utils/i18n';
 import LanguageSwitcher from './LanguageSwitcher';
+import { logError } from '../lib/utils/errorLogger';
 
 interface ResponseHackerReadyProps {
   onContinue: () => void;
@@ -18,6 +19,7 @@ const ResponseHackerReady: React.FC<ResponseHackerReadyProps> = ({ onContinue, o
   const [xp, setXp] = useState(0);
   const [isPaid, setIsPaid] = useState(false);
   const [language, setLanguage] = useState(getUserLanguage());
+  const typingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Get Trae's response based on language
   const getTraeMessage = () => {
@@ -28,49 +30,73 @@ const ResponseHackerReady: React.FC<ResponseHackerReadyProps> = ({ onContinue, o
 
   // Simulate typing effect
   useEffect(() => {
-    setIsVisible(true);
-    
-    // Try to get user name from localStorage
-    const savedName = localStorage.getItem('neuropul_user_name');
-    if (savedName) {
-      setUserName(savedName);
-    }
-    
-    // Check if user has paid status
-    const userPaid = localStorage.getItem('neuropul_is_paid') === 'true';
-    setIsPaid(userPaid);
-    
-    const traeMessage = getTraeMessage();
-    let currentText = '';
-    let currentIndex = 0;
-    
-    const typingInterval = setInterval(() => {
-      if (currentIndex < traeMessage.length) {
-        currentText += traeMessage[currentIndex];
-        setMessage(currentText);
-        currentIndex++;
-      } else {
-        clearInterval(typingInterval);
-        setIsTyping(false);
-        
-        // Show continue button after message is fully typed
-        setTimeout(() => {
-          setShowContinue(true);
-          
-          // Award XP for reaching this step
-          const currentXp = parseInt(localStorage.getItem('neuropul_xp') || '0');
-          const newXp = currentXp + 15; // More XP for advanced users
-          localStorage.setItem('neuropul_xp', newXp.toString());
-          setXp(newXp);
-          
-          // Play XP sound
-          playSound('xp');
-          vibrate([50, 30, 50]);
-        }, 500);
+    try {
+      setIsVisible(true);
+      
+      // Try to get user name from localStorage
+      const savedName = localStorage.getItem('neuropul_user_name');
+      if (savedName) {
+        setUserName(savedName);
       }
-    }, 20); // Typing speed
-    
-    return () => clearInterval(typingInterval);
+      
+      // Check if user has paid status
+      const userPaid = localStorage.getItem('neuropul_is_paid') === 'true';
+      setIsPaid(userPaid);
+      
+      const traeMessage = getTraeMessage();
+      let currentText = '';
+      let currentIndex = 0;
+      
+      // Clear previous interval if exists
+      if (typingIntervalRef.current) {
+        clearInterval(typingIntervalRef.current);
+      }
+      
+      typingIntervalRef.current = setInterval(() => {
+        if (currentIndex < traeMessage.length) {
+          currentText += traeMessage[currentIndex];
+          setMessage(currentText);
+          currentIndex++;
+        } else {
+          if (typingIntervalRef.current) {
+            clearInterval(typingIntervalRef.current);
+            typingIntervalRef.current = null;
+          }
+          setIsTyping(false);
+          
+          // Show continue button after message is fully typed
+          setTimeout(() => {
+            setShowContinue(true);
+            
+            // Award XP for reaching this step
+            const currentXp = parseInt(localStorage.getItem('neuropul_xp') || '0');
+            const newXp = currentXp + 15; // More XP for advanced users
+            localStorage.setItem('neuropul_xp', newXp.toString());
+            setXp(newXp);
+            
+            // Play XP sound
+            playSound('xp');
+            vibrate([50, 30, 50]);
+          }, 500);
+        }
+      }, 20); // Typing speed
+      
+      return () => {
+        if (typingIntervalRef.current) {
+          clearInterval(typingIntervalRef.current);
+          typingIntervalRef.current = null;
+        }
+      };
+    } catch (error) {
+      logError(error, {
+        component: 'ResponseHackerReady',
+        action: 'typingEffect'
+      });
+      // Fallback to static message
+      setMessage(getTraeMessage());
+      setIsTyping(false);
+      setShowContinue(true);
+    }
   }, [language]);
 
   // Sound effects with more cyberpunk feel
@@ -124,30 +150,44 @@ const ResponseHackerReady: React.FC<ResponseHackerReadyProps> = ({ onContinue, o
   };
 
   const handleContinue = () => {
-    playSound('click');
-    vibrate([50, 30, 50]);
-    
-    // Save user experience level
-    localStorage.setItem('neuropul_user_experience', 'advanced');
-    localStorage.setItem('neuropul_user_path', 'ready');
-    
-    // Track progress
-    const visitCount = parseInt(localStorage.getItem('neuropul_visit_count') || '0');
-    localStorage.setItem('neuropul_visit_count', (visitCount + 1).toString());
-    
-    // Set flag for potential CTA later
-    localStorage.setItem('neuropul_viewed_messages', '3');
-    
-    // Set flag for advanced tools
-    localStorage.setItem('neuropul_advanced_tools_unlocked', 'true');
-    
-    onContinue();
+    try {
+      playSound('click');
+      vibrate([50, 30, 50]);
+      
+      // Save user experience level
+      localStorage.setItem('neuropul_user_experience', 'advanced');
+      localStorage.setItem('neuropul_user_path', 'ready');
+      
+      // Track progress
+      const visitCount = parseInt(localStorage.getItem('neuropul_visit_count') || '0');
+      localStorage.setItem('neuropul_visit_count', (visitCount + 1).toString());
+      
+      // Set flag for potential CTA later
+      localStorage.setItem('neuropul_viewed_messages', '3');
+      
+      // Set flag for advanced tools
+      localStorage.setItem('neuropul_advanced_tools_unlocked', 'true');
+      
+      onContinue();
+    } catch (error) {
+      logError(error, {
+        component: 'ResponseHackerReady',
+        action: 'handleContinue'
+      });
+    }
   };
 
   const handleBack = () => {
-    playSound('click');
-    vibrate([30]);
-    onBack();
+    try {
+      playSound('click');
+      vibrate([30]);
+      onBack();
+    } catch (error) {
+      logError(error, {
+        component: 'ResponseHackerReady',
+        action: 'handleBack'
+      });
+    }
   };
 
   // Handle name input
@@ -155,18 +195,25 @@ const ResponseHackerReady: React.FC<ResponseHackerReadyProps> = ({ onContinue, o
   const [nameInput, setNameInput] = useState('');
 
   const handleNameSubmit = () => {
-    if (nameInput.trim()) {
-      localStorage.setItem('neuropul_user_name', nameInput.trim());
-      setUserName(nameInput.trim());
-      setShowNameInput(false);
-      playSound('click');
-      vibrate([50, 30, 50]);
-      
-      // Award XP for setting name
-      const currentXp = parseInt(localStorage.getItem('neuropul_xp') || '0');
-      const newXp = currentXp + 5;
-      localStorage.setItem('neuropul_xp', newXp.toString());
-      setXp(newXp);
+    try {
+      if (nameInput.trim()) {
+        localStorage.setItem('neuropul_user_name', nameInput.trim());
+        setUserName(nameInput.trim());
+        setShowNameInput(false);
+        playSound('click');
+        vibrate([50, 30, 50]);
+        
+        // Award XP for setting name
+        const currentXp = parseInt(localStorage.getItem('neuropul_xp') || '0');
+        const newXp = currentXp + 5;
+        localStorage.setItem('neuropul_xp', newXp.toString());
+        setXp(newXp);
+      }
+    } catch (error) {
+      logError(error, {
+        component: 'ResponseHackerReady',
+        action: 'handleNameSubmit'
+      });
     }
   };
 

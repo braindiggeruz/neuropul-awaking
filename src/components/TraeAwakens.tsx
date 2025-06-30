@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Brain, Zap, Skull, Rocket, PenIcon as AlienIcon } from 'lucide-react';
 import { getUserLanguage, setUserLanguage } from '../lib/utils/i18n';
 import LanguageSwitcher from './LanguageSwitcher';
+import { logError } from '../lib/utils/errorLogger';
 
 interface TraeAwakensProps {
   onPathSelect: (path: 'lost' | 'awakening' | 'ready') => void;
@@ -14,7 +15,7 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
   const [isTyping, setIsTyping] = useState(true);
   const [showOptions, setShowOptions] = useState(false);
   const [userPath, setUserPath] = useState<string | null>(null);
-  const [inactivityTimer, setInactivityTimer] = useState<NodeJS.Timeout | null>(null);
+  const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [language, setLanguage] = useState(getUserLanguage());
 
   // Get Trae's messages based on language
@@ -30,61 +31,80 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
 
   // Simulate typing effect
   useEffect(() => {
-    setIsVisible(true);
-    
-    const traeMessage = getTraeMessage();
-    const traeQuestion = getTraeQuestion();
-    
-    let currentText = '';
-    let currentIndex = 0;
-    
-    const typingInterval = setInterval(() => {
-      if (currentIndex < traeMessage.length) {
-        currentText += traeMessage[currentIndex];
-        setMessage(currentText);
-        currentIndex++;
-      } else {
-        clearInterval(typingInterval);
-        setIsTyping(false);
-        
-        // Show the question after a short delay
-        setTimeout(() => {
-          setMessage(prev => `${prev}\n\n${traeQuestion}`);
+    try {
+      setIsVisible(true);
+      
+      const traeMessage = getTraeMessage();
+      const traeQuestion = getTraeQuestion();
+      
+      let currentText = '';
+      let currentIndex = 0;
+      
+      const typingInterval = setInterval(() => {
+        if (currentIndex < traeMessage.length) {
+          currentText += traeMessage[currentIndex];
+          setMessage(currentText);
+          currentIndex++;
+        } else {
+          clearInterval(typingInterval);
+          setIsTyping(false);
           
-          // Show options after another delay
+          // Show the question after a short delay
           setTimeout(() => {
-            setShowOptions(true);
+            setMessage(prev => `${prev}\n\n${traeQuestion}`);
             
-            // Set inactivity timer
-            const timer = setTimeout(() => {
-              if (!userPath) {
-                const reminderText = language === 'ru' 
-                  ? `${prev}\n\nЭй, ты ещё здесь? Выбери свой путь, чтобы мы могли начать.`
-                  : `${prev}\n\nHey, hali ham shu yerdamisan? Boshlashimiz uchun yo'lingni tanla.`;
-                setMessage(reminderText);
-                playSound('hover');
-                vibrate([100, 50, 100]);
+            // Show options after another delay
+            setTimeout(() => {
+              setShowOptions(true);
+              
+              // Set inactivity timer
+              if (inactivityTimerRef.current) {
+                clearTimeout(inactivityTimerRef.current);
               }
-            }, 15000); // 15 seconds
-            
-            setInactivityTimer(timer);
-          }, 1000);
-        }, 500);
-      }
-    }, 30); // Typing speed
-    
-    return () => {
-      clearInterval(typingInterval);
-      if (inactivityTimer) clearTimeout(inactivityTimer);
-    };
+              
+              inactivityTimerRef.current = setTimeout(() => {
+                if (!userPath) {
+                  const reminderText = language === 'ru' 
+                    ? `${traeMessage}\n\n${traeQuestion}\n\nЭй, ты ещё здесь? Выбери свой путь, чтобы мы могли начать.`
+                    : `${traeMessage}\n\n${traeQuestion}\n\nHey, hali ham shu yerdamisan? Boshlashimiz uchun yo'lingni tanla.`;
+                  setMessage(reminderText);
+                  playSound('hover');
+                  vibrate([100, 50, 100]);
+                }
+              }, 15000); // 15 seconds
+            }, 1000);
+          }, 500);
+        }
+      }, 30); // Typing speed
+      
+      return () => {
+        clearInterval(typingInterval);
+        if (inactivityTimerRef.current) {
+          clearTimeout(inactivityTimerRef.current);
+          inactivityTimerRef.current = null;
+        }
+      };
+    } catch (error) {
+      logError(error, {
+        component: 'TraeAwakens',
+        action: 'typingEffect'
+      });
+      // Fallback to static message
+      setMessage(getTraeMessage() + "\n\n" + getTraeQuestion());
+      setIsTyping(false);
+      setShowOptions(true);
+    }
   }, [language]);
 
   // Clean up inactivity timer when component unmounts
   useEffect(() => {
     return () => {
-      if (inactivityTimer) clearTimeout(inactivityTimer);
+      if (inactivityTimerRef.current) {
+        clearTimeout(inactivityTimerRef.current);
+        inactivityTimerRef.current = null;
+      }
     };
-  }, [inactivityTimer]);
+  }, []);
 
   // Sound effects with more cyberpunk feel
   const playSound = (type: 'click' | 'hover') => {
@@ -127,22 +147,33 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
   };
 
   const handleOptionClick = (path: 'lost' | 'awakening' | 'ready') => {
-    // Clear inactivity timer
-    if (inactivityTimer) clearTimeout(inactivityTimer);
-    
-    // Save user path to localStorage for future reference
-    localStorage.setItem('neuropul_user_path', path);
-    localStorage.setItem('neuropul_first_visit_date', new Date().toISOString());
-    
-    // Set user path in state
-    setUserPath(path);
-    
-    // Play sound and vibrate
-    playSound('click');
-    vibrate([50, 30, 50]);
-    
-    // Call the onPathSelect callback
-    onPathSelect(path);
+    try {
+      // Clear inactivity timer
+      if (inactivityTimerRef.current) {
+        clearTimeout(inactivityTimerRef.current);
+        inactivityTimerRef.current = null;
+      }
+      
+      // Save user path to localStorage for future reference
+      localStorage.setItem('neuropul_user_path', path);
+      localStorage.setItem('neuropul_first_visit_date', new Date().toISOString());
+      
+      // Set user path in state
+      setUserPath(path);
+      
+      // Play sound and vibrate
+      playSound('click');
+      vibrate([50, 30, 50]);
+      
+      // Call the onPathSelect callback
+      onPathSelect(path);
+    } catch (error) {
+      logError(error, {
+        component: 'TraeAwakens',
+        action: 'handleOptionClick',
+        additionalData: { path }
+      });
+    }
   };
 
   // Handle custom user input
@@ -150,24 +181,32 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
   const [showInput, setShowInput] = useState(false);
 
   const handleCustomInput = () => {
-    if (userInput.trim()) {
-      // Process user input to determine path
-      const input = userInput.toLowerCase();
-      let detectedPath: 'lost' | 'awakening' | 'ready' = 'awakening'; // Default
-      
-      if (input.includes('не знаю') || input.includes('потерян') || input.includes('новичок') || 
-          input.includes('bilmayman') || input.includes('yo\'qolgan') || input.includes('yangi')) {
-        detectedPath = 'lost';
-      } else if (input.includes('опыт') || input.includes('знаю') || input.includes('эксперт') ||
-                input.includes('tajriba') || input.includes('bilaman') || input.includes('ekspert')) {
-        detectedPath = 'ready';
+    try {
+      if (userInput.trim()) {
+        // Process user input to determine path
+        const input = userInput.toLowerCase();
+        let detectedPath: 'lost' | 'awakening' | 'ready' = 'awakening'; // Default
+        
+        if (input.includes('не знаю') || input.includes('потерян') || input.includes('новичок') || 
+            input.includes('bilmayman') || input.includes('yo\'qolgan') || input.includes('yangi')) {
+          detectedPath = 'lost';
+        } else if (input.includes('опыт') || input.includes('знаю') || input.includes('эксперт') ||
+                  input.includes('tajriba') || input.includes('bilaman') || input.includes('ekspert')) {
+          detectedPath = 'ready';
+        }
+        
+        // Save user input for context
+        localStorage.setItem('neuropul_user_input', userInput);
+        
+        // Handle the detected path
+        handleOptionClick(detectedPath);
       }
-      
-      // Save user input for context
-      localStorage.setItem('neuropul_user_input', userInput);
-      
-      // Handle the detected path
-      handleOptionClick(detectedPath);
+    } catch (error) {
+      logError(error, {
+        component: 'TraeAwakens',
+        action: 'handleCustomInput',
+        additionalData: { userInput }
+      });
     }
   };
 

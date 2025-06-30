@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Brain, ArrowRight, Zap, Sparkles } from 'lucide-react';
-import { getUserLanguage, setUserLanguage } from '../lib/utils/i18n';
+import { getUserLanguage, setUserLanguage, translate } from '../lib/utils/i18n';
 import LanguageSwitcher from './LanguageSwitcher';
+import { logError } from '../lib/utils/errorLogger';
 
 interface ResponseAwakeningProps {
   onContinue: () => void;
@@ -17,55 +18,78 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
   const [userName, setUserName] = useState('');
   const [xp, setXp] = useState(0);
   const [language, setLanguage] = useState(getUserLanguage());
+  const typingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Get Trae's response based on language
   const getTraeMessage = () => {
-    return language === 'ru' 
-      ? "Отлично. Я уважаю тех, кто готов к действию.\n\nПробуждение — это не просто слова. Это путь трансформации. Ты станешь тем, кто использует AI как продолжение своего разума.\n\nЯ проведу тебя через ритуал пробуждения. Ты узнаешь свой архетип, получишь персональное пророчество и доступ к инструментам AI-мастерства.\n\nГотов начать?"
-      : "Ajoyib. Men harakatga tayyor odamlarni hurmat qilaman.\n\nUyg'onish - bu shunchaki so'zlar emas. Bu o'zgarish yo'li. Siz AI-ni o'z ongingizning davomi sifatida ishlatadiganlardan biriga aylanasiz.\n\nMen sizni uyg'onish marosimi orqali olib o'taman. Siz o'z arxetipingizni bilib olasiz, shaxsiy bashorat va AI-mahorat vositalariga kirish huquqini olasiz.\n\nBoshlashga tayyormisiz?";
+    return translate('awakeningResponse', language);
   };
 
   // Simulate typing effect
   useEffect(() => {
-    setIsVisible(true);
-    
-    // Try to get user name from localStorage
-    const savedName = localStorage.getItem('neuropul_user_name');
-    if (savedName) {
-      setUserName(savedName);
-    }
-    
-    const traeMessage = getTraeMessage();
-    let currentText = '';
-    let currentIndex = 0;
-    
-    const typingInterval = setInterval(() => {
-      if (currentIndex < traeMessage.length) {
-        currentText += traeMessage[currentIndex];
-        setMessage(currentText);
-        currentIndex++;
-      } else {
-        clearInterval(typingInterval);
-        setIsTyping(false);
-        
-        // Show continue button after message is fully typed
-        setTimeout(() => {
-          setShowContinue(true);
-          
-          // Award XP for reaching this step
-          const currentXp = parseInt(localStorage.getItem('neuropul_xp') || '0');
-          const newXp = currentXp + 10;
-          localStorage.setItem('neuropul_xp', newXp.toString());
-          setXp(newXp);
-          
-          // Play XP sound
-          playSound('xp');
-          vibrate([50, 30, 50]);
-        }, 500);
+    try {
+      setIsVisible(true);
+      
+      // Try to get user name from localStorage
+      const savedName = localStorage.getItem('neuropul_user_name');
+      if (savedName) {
+        setUserName(savedName);
       }
-    }, 20); // Typing speed
-    
-    return () => clearInterval(typingInterval);
+      
+      const traeMessage = getTraeMessage();
+      let currentText = '';
+      let currentIndex = 0;
+      
+      // Clear previous interval if exists
+      if (typingIntervalRef.current) {
+        clearInterval(typingIntervalRef.current);
+      }
+      
+      typingIntervalRef.current = setInterval(() => {
+        if (currentIndex < traeMessage.length) {
+          currentText += traeMessage[currentIndex];
+          setMessage(currentText);
+          currentIndex++;
+        } else {
+          if (typingIntervalRef.current) {
+            clearInterval(typingIntervalRef.current);
+            typingIntervalRef.current = null;
+          }
+          setIsTyping(false);
+          
+          // Show continue button after message is fully typed
+          setTimeout(() => {
+            setShowContinue(true);
+            
+            // Award XP for reaching this step
+            const currentXp = parseInt(localStorage.getItem('neuropul_xp') || '0');
+            const newXp = currentXp + 10; // Бонус за выбор архетипа
+            localStorage.setItem('neuropul_xp', newXp.toString());
+            setXp(newXp);
+            
+            // Play XP sound
+            playSound('xp');
+            vibrate([50, 30, 50]);
+          }, 500);
+        }
+      }, 20); // Typing speed
+      
+      return () => {
+        if (typingIntervalRef.current) {
+          clearInterval(typingIntervalRef.current);
+          typingIntervalRef.current = null;
+        }
+      };
+    } catch (error) {
+      logError(error, {
+        component: 'ResponseAwakening',
+        action: 'typingEffect'
+      });
+      // Fallback to static message
+      setMessage(getTraeMessage());
+      setIsTyping(false);
+      setShowContinue(true);
+    }
   }, [language]);
 
   // Sound effects with more cyberpunk feel
@@ -119,30 +143,44 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
   };
 
   const handleContinue = () => {
-    playSound('click');
-    vibrate([50, 30, 50]);
-    
-    // Save user experience level
-    localStorage.setItem('neuropul_user_experience', 'intermediate');
-    localStorage.setItem('neuropul_user_path', 'awakening');
-    
-    // Track progress
-    const visitCount = parseInt(localStorage.getItem('neuropul_visit_count') || '0');
-    localStorage.setItem('neuropul_visit_count', (visitCount + 1).toString());
-    
-    // Set flag for potential CTA later
-    localStorage.setItem('neuropul_viewed_messages', '2');
-    
-    // Set flag for awakening
-    localStorage.setItem('neuropul_awakening_started', 'true');
-    
-    onContinue();
+    try {
+      playSound('click');
+      vibrate([50, 30, 50]);
+      
+      // Save user experience level
+      localStorage.setItem('neuropul_user_experience', 'intermediate');
+      localStorage.setItem('neuropul_user_path', 'awakening');
+      
+      // Track progress
+      const visitCount = parseInt(localStorage.getItem('neuropul_visit_count') || '0');
+      localStorage.setItem('neuropul_visit_count', (visitCount + 1).toString());
+      
+      // Set flag for potential CTA later
+      localStorage.setItem('neuropul_viewed_messages', '2');
+      
+      // Set flag for awakening
+      localStorage.setItem('neuropul_awakening_started', 'true');
+      
+      onContinue();
+    } catch (error) {
+      logError(error, {
+        component: 'ResponseAwakening',
+        action: 'handleContinue'
+      });
+    }
   };
 
   const handleBack = () => {
-    playSound('click');
-    vibrate([30]);
-    onBack();
+    try {
+      playSound('click');
+      vibrate([30]);
+      onBack();
+    } catch (error) {
+      logError(error, {
+        component: 'ResponseAwakening',
+        action: 'handleBack'
+      });
+    }
   };
 
   // Handle name input
@@ -150,18 +188,25 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
   const [nameInput, setNameInput] = useState('');
 
   const handleNameSubmit = () => {
-    if (nameInput.trim()) {
-      localStorage.setItem('neuropul_user_name', nameInput.trim());
-      setUserName(nameInput.trim());
-      setShowNameInput(false);
-      playSound('click');
-      vibrate([50, 30, 50]);
-      
-      // Award XP for setting name
-      const currentXp = parseInt(localStorage.getItem('neuropul_xp') || '0');
-      const newXp = currentXp + 5;
-      localStorage.setItem('neuropul_xp', newXp.toString());
-      setXp(newXp);
+    try {
+      if (nameInput.trim()) {
+        localStorage.setItem('neuropul_user_name', nameInput.trim());
+        setUserName(nameInput.trim());
+        setShowNameInput(false);
+        playSound('click');
+        vibrate([50, 30, 50]);
+        
+        // Award XP for setting name
+        const currentXp = parseInt(localStorage.getItem('neuropul_xp') || '0');
+        const newXp = currentXp + 5;
+        localStorage.setItem('neuropul_xp', newXp.toString());
+        setXp(newXp);
+      }
+    } catch (error) {
+      logError(error, {
+        component: 'ResponseAwakening',
+        action: 'handleNameSubmit'
+      });
     }
   };
 

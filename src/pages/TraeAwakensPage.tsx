@@ -1,12 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import TraeAwakens from '../components/TraeAwakens';
 import ResponseLostSoul from '../components/ResponseLostSoul';
 import ResponseAwakening from '../components/ResponseAwakening';
 import ResponseHackerReady from '../components/ResponseHackerReady';
 import { AnimatePresence, motion } from 'framer-motion';
-import { getUserLanguage, setUserLanguage } from '../lib/utils/i18n';
-import LanguageSwitcher from '../components/LanguageSwitcher';
-import { logError } from '../lib/utils/errorLogger';
 
 type Screen = 'intro' | 'lost' | 'awakening' | 'ready' | 'portal';
 
@@ -15,196 +12,128 @@ const TraeAwakensPage: React.FC = () => {
   const [userPath, setUserPath] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<string>('');
   const [viewCount, setViewCount] = useState(0);
-  const [language, setLanguage] = useState(getUserLanguage());
-  const navigationInProgressRef = useRef(false);
+  const [language, setLanguage] = useState<'ru' | 'uz'>('ru');
 
   // Initialize session and tracking
   useEffect(() => {
-    try {
-      // Set language from localStorage or URL parameter
-      const urlParams = new URLSearchParams(window.location.search);
-      const urlLang = urlParams.get('lang');
-      
-      if (urlLang === 'uz' || urlLang === 'ru') {
-        setLanguage(urlLang);
-        setUserLanguage(urlLang);
-      }
-      
-      // Generate session ID if not exists
-      const existingSessionId = localStorage.getItem('neuropul_session_id');
-      if (existingSessionId) {
-        setSessionId(existingSessionId);
+    // Load language preference
+    const urlParams = new URLSearchParams(window.location.search);
+    const langParam = urlParams.get('lang');
+    
+    if (langParam === 'uz' || langParam === 'ru') {
+      setLanguage(langParam);
+      localStorage.setItem('neuropul_language', langParam);
+    } else {
+      const savedLang = localStorage.getItem('neuropul_language');
+      if (savedLang === 'uz' || savedLang === 'ru') {
+        setLanguage(savedLang);
       } else {
-        const newSessionId = `session_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-        localStorage.setItem('neuropul_session_id', newSessionId);
-        setSessionId(newSessionId);
+        // Try browser language
+        const browserLang = navigator.language.startsWith('uz') ? 'uz' : 'ru';
+        setLanguage(browserLang);
+        localStorage.setItem('neuropul_language', browserLang);
       }
-      
-      // Track view count
-      const views = parseInt(localStorage.getItem('neuropul_view_count') || '0');
-      const newViewCount = views + 1;
-      localStorage.setItem('neuropul_view_count', newViewCount.toString());
-      setViewCount(newViewCount);
-      
-      // Track first visit date if not set
-      if (!localStorage.getItem('neuropul_first_visit')) {
-        localStorage.setItem('neuropul_first_visit', new Date().toISOString());
-      }
-      
-      // Track last visit date
-      localStorage.setItem('neuropul_last_visit', new Date().toISOString());
-      
-      // Check for returning user
-      const savedPath = localStorage.getItem('neuropul_user_path');
-      if (savedPath) {
-        setUserPath(savedPath);
-      }
-      
-      // Log user agent for analytics
-      const userAgent = navigator.userAgent;
-      localStorage.setItem('neuropul_user_agent', userAgent);
-      
-      // Initialize XP if not exists
-      if (!localStorage.getItem('neuropul_xp')) {
-        localStorage.setItem('neuropul_xp', '0');
-      }
-      
-      // Initialize isPaid flag if not exists
-      if (!localStorage.getItem('neuropul_is_paid')) {
-        localStorage.setItem('neuropul_is_paid', 'false');
-      }
-      
-      // Initialize language if not exists
-      if (!localStorage.getItem('neuropul_language')) {
-        localStorage.setItem('neuropul_language', language);
-      }
-    } catch (error) {
-      logError(error, {
-        component: 'TraeAwakensPage',
-        action: 'initialization'
-      });
+    }
+    
+    // Generate session ID if not exists
+    const existingSessionId = localStorage.getItem('neuropul_session_id');
+    if (existingSessionId) {
+      setSessionId(existingSessionId);
+    } else {
+      const newSessionId = `session_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+      localStorage.setItem('neuropul_session_id', newSessionId);
+      setSessionId(newSessionId);
+    }
+    
+    // Track view count
+    const views = parseInt(localStorage.getItem('neuropul_view_count') || '0');
+    const newViewCount = views + 1;
+    localStorage.setItem('neuropul_view_count', newViewCount.toString());
+    setViewCount(newViewCount);
+    
+    // Track first visit date if not set
+    if (!localStorage.getItem('neuropul_first_visit')) {
+      localStorage.setItem('neuropul_first_visit', new Date().toISOString());
+    }
+    
+    // Track last visit date
+    localStorage.setItem('neuropul_last_visit', new Date().toISOString());
+    
+    // Check for returning user
+    const savedPath = localStorage.getItem('neuropul_user_path');
+    if (savedPath) {
+      setUserPath(savedPath);
+    }
+    
+    // Log user agent for analytics
+    const userAgent = navigator.userAgent;
+    localStorage.setItem('neuropul_user_agent', userAgent);
+    
+    // Initialize XP if not exists
+    if (!localStorage.getItem('neuropul_xp')) {
+      localStorage.setItem('neuropul_xp', '0');
+    }
+    
+    // Initialize isPaid flag if not exists
+    if (!localStorage.getItem('neuropul_is_paid')) {
+      localStorage.setItem('neuropul_is_paid', 'false');
     }
   }, []);
 
   const handlePathSelect = (path: 'lost' | 'awakening' | 'ready') => {
-    try {
-      // Prevent multiple navigation attempts
-      if (navigationInProgressRef.current) {
-        console.log('Navigation already in progress, ignoring request');
-        return;
-      }
-      
-      navigationInProgressRef.current = true;
-      
-      console.log(`User selected path: ${path}`);
-      console.log(`Session ID: ${sessionId}`);
-      console.log(`View count: ${viewCount}`);
-      
-      // Set the screen based on the path
-      setCurrentScreen(path);
-      setUserPath(path);
-      
-      // Track path selection
-      localStorage.setItem('neuropul_user_path', path);
-      localStorage.setItem('neuropul_path_selected_at', new Date().toISOString());
-      
-      // Set level_selected flag
-      localStorage.setItem('neuropul_level_selected', 'true');
-      
-      // Reset navigation lock after a short delay
-      setTimeout(() => {
-        navigationInProgressRef.current = false;
-      }, 500);
-    } catch (error) {
-      logError(error, {
-        component: 'TraeAwakensPage',
-        action: 'handlePathSelect',
-        additionalData: { path }
-      });
-      // Reset navigation lock in case of error
-      navigationInProgressRef.current = false;
-    }
+    setCurrentScreen(path);
+    setUserPath(path);
+    
+    // Log user selection
+    console.log(`User selected path: ${path}`);
+    console.log(`Session ID: ${sessionId}`);
+    console.log(`View count: ${viewCount}`);
+    
+    // Track path selection
+    localStorage.setItem('neuropul_user_path', path);
+    localStorage.setItem('neuropul_path_selected_at', new Date().toISOString());
+    
+    // Set level_selected flag
+    localStorage.setItem('neuropul_level_selected', 'true');
   };
 
   const handleBack = () => {
-    try {
-      // Prevent multiple navigation attempts
-      if (navigationInProgressRef.current) {
-        console.log('Navigation already in progress, ignoring request');
-        return;
-      }
-      
-      navigationInProgressRef.current = true;
-      
-      console.log('User navigated back to intro');
-      setCurrentScreen('intro');
-      
-      // Reset navigation lock after a short delay
-      setTimeout(() => {
-        navigationInProgressRef.current = false;
-      }, 500);
-    } catch (error) {
-      logError(error, {
-        component: 'TraeAwakensPage',
-        action: 'handleBack'
-      });
-      // Reset navigation lock in case of error
-      navigationInProgressRef.current = false;
-    }
+    setCurrentScreen('intro');
+    
+    // Log navigation
+    console.log('User navigated back to intro');
   };
 
   const handleContinueToPortal = () => {
-    try {
-      // Prevent multiple navigation attempts
-      if (navigationInProgressRef.current) {
-        console.log('Navigation already in progress, ignoring request');
-        return;
-      }
-      
-      navigationInProgressRef.current = true;
-      
-      console.log('User completed introduction');
-      console.log(`Final path: ${userPath}`);
-      
-      setCurrentScreen('portal');
-      
-      // Set completion flag
-      localStorage.setItem('neuropul_intro_completed', 'true');
-      localStorage.setItem('neuropul_intro_completed_at', new Date().toISOString());
-      
-      // Check if this is the third message viewed (for CTA trigger)
-      const messagesViewed = parseInt(localStorage.getItem('neuropul_viewed_messages') || '0');
-      if (messagesViewed >= 3) {
-        // Set flag for CTA
-        localStorage.setItem('neuropul_show_cta', 'true');
-      }
-      
-      // In a real implementation, you would navigate to the awakening portal or dashboard
-      // For now, we'll just redirect to the home page after a delay
-      setTimeout(() => {
-        // Check if we should show CTA
-        if (localStorage.getItem('neuropul_show_cta') === 'true' && localStorage.getItem('neuropul_is_paid') !== 'true') {
-          // Redirect to CTA page
-          window.location.href = '/premium';
-        } else {
-          // Redirect to main app
-          window.location.href = '/';
-        }
-        
-        // Reset navigation lock
-        navigationInProgressRef.current = false;
-      }, 1000);
-    } catch (error) {
-      logError(error, {
-        component: 'TraeAwakensPage',
-        action: 'handleContinueToPortal'
-      });
-      // Reset navigation lock in case of error
-      navigationInProgressRef.current = false;
-      
-      // Fallback to home page
-      window.location.href = '/';
+    setCurrentScreen('portal');
+    
+    // Log completion
+    console.log('User completed introduction');
+    console.log(`Final path: ${userPath}`);
+    
+    // Set completion flag
+    localStorage.setItem('neuropul_intro_completed', 'true');
+    localStorage.setItem('neuropul_intro_completed_at', new Date().toISOString());
+    
+    // Check if this is the third message viewed (for CTA trigger)
+    const messagesViewed = parseInt(localStorage.getItem('neuropul_viewed_messages') || '0');
+    if (messagesViewed >= 3) {
+      // Set flag for CTA
+      localStorage.setItem('neuropul_show_cta', 'true');
     }
+    
+    // In a real implementation, you would navigate to the awakening portal or dashboard
+    // For now, we'll just redirect to the home page after a delay
+    setTimeout(() => {
+      // Check if we should show CTA
+      if (localStorage.getItem('neuropul_show_cta') === 'true' && localStorage.getItem('neuropul_is_paid') !== 'true') {
+        // Redirect to CTA page
+        window.location.href = '/premium';
+      } else {
+        // Redirect to main app
+        window.location.href = '/';
+      }
+    }, 500);
   };
 
   // Auto-reset session after inactivity
@@ -236,20 +165,8 @@ const TraeAwakensPage: React.FC = () => {
     return () => clearTimeout(inactivityTimeout);
   }, [currentScreen]);
 
-  const handleLanguageChange = (newLanguage: 'ru' | 'uz') => {
-    setLanguage(newLanguage);
-    setUserLanguage(newLanguage);
-  };
-
   return (
     <div className="relative min-h-screen overflow-hidden">
-      {/* Global language switcher (only shown on intro screen) */}
-      {currentScreen === 'intro' && (
-        <div className="absolute top-4 right-4 z-50">
-          <LanguageSwitcher onLanguageChange={handleLanguageChange} />
-        </div>
-      )}
-      
       <AnimatePresence mode="wait">
         {currentScreen === 'intro' && (
           <motion.div

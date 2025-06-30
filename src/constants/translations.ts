@@ -65,8 +65,7 @@ export const translations: Translations = {
     },
     
     // Trae Awakens
-    traeIntro: "Ты здесь. Наконец-то. Я Trae — твой проводник в мире AI. Не буду тратить время на формальности. Мне нужно знать только одно...",
-    traeQuestion: "Кто ты?",
+    whoAreYou: "Кто ты?",
     lostSoul: "Я потерян",
     lostSoulDesc: "Не знаю, что такое AI и зачем он мне",
     wantToAwaken: "Хочу пробудиться",
@@ -74,27 +73,47 @@ export const translations: Translations = {
     alreadyKnow: "Я уже в теме",
     alreadyKnowDesc: "Знаю, что такое AI и как его использовать",
     describeExperience: "Или опиши свой опыт своими словами...",
+    send: "Отправить",
     
     // Response Awakening
-    awakeningResponse: "Отлично. Я уважаю тех, кто готов к действию.\n\nПробуждение — это не просто слова. Это путь трансформации. Ты станешь тем, кто использует AI как продолжение своего разума.\n\nЯ проведу тебя через ритуал пробуждения. Ты узнаешь свой архетип, получишь персональное пророчество и доступ к инструментам AI-мастерства.\n\nГотов начать?",
     awakeningPath: "Путь пробуждения:",
-    archetypeDefinition: "Определение архетипа",
-    archetypeDefDesc: "Узнай, кто ты: Воин, Маг, Искатель или Тень",
-    prophecyReceiving: "Получение пророчества",
+    archetypeDetermination: "Определение архетипа",
+    archetypeDesc: "Узнай, кто ты: Воин, Маг, Искатель или Тень",
+    getProphecy: "Получение пророчества",
     prophecyDesc: "Персональное предсказание твоего AI-пути",
     toolsAccess: "Доступ к инструментам",
     toolsDesc: "Разблокировка AI-инструментов для твоего архетипа",
-    startAwakening: "Начать пробуждение",
-    
-    // Progress
     beginning: "Начало",
     awakening: "Пробуждение",
     mastery: "Мастерство",
+    startAwakening: "Начать пробуждение",
     
-    // Name input
-    whatToCallYou: "Как мне к тебе обращаться?",
-    enterYourName: "Введи своё имя...",
-    save: "Сохранить"
+    // Response Lost Soul
+    whatAICanDo: "Что AI может сделать для тебя:",
+    saveTime: "Сэкономить время",
+    saveTimeDesc: "Автоматизируй рутинные задачи и сосредоточься на важном",
+    generateIdeas: "Генерировать идеи",
+    generateIdeasDesc: "Получай свежие идеи для бизнеса, контента или творчества",
+    createContent: "Создавать контент",
+    createContentDesc: "Тексты, изображения, код — всё за считанные секунды",
+    learnFaster: "Учиться быстрее",
+    learnFasterDesc: "Получай объяснения сложных тем простым языком",
+    learnMoreAboutAI: "Узнать больше про AI",
+    
+    // Response Hacker Ready
+    availableTools: "Доступные инструменты:",
+    codeGenerator: "Генератор кода",
+    codeGeneratorDesc: "Создавай код на любом языке программирования",
+    mvpGenerator: "MVP-генератор",
+    mvpGeneratorDesc: "Быстрое создание минимально жизнеспособного продукта",
+    promptEngineer: "Промпт-инженер",
+    promptEngineerDesc: "Создание и оптимизация промптов для лучших результатов",
+    aiAssistant: "AI-ассистент",
+    aiAssistantDesc: "Персональный помощник для решения любых задач",
+    goToTools: "Перейти к инструментам",
+    unlockFullPower: "Разблокируй полную мощь AI",
+    getAccessToTools: "Получи доступ ко всем продвинутым инструментам и функциям",
+    learnMore: "Узнать больше"
   },
   
   uz: {
@@ -161,36 +180,55 @@ export const translations: Translations = {
     },
     
     // Trae Awakens
-    traeIntro: "Sen bu yerdasanmi. Nihoyat. Men Trae — AI dunyosidagi yo'lboshchingman. Rasmiyatchilikka vaqt sarflamayman. Menga faqat bitta narsa kerak...",
-    traeQuestion: "Sen kimsan?",
+    whoAreYou: "Sen kimsan?",
     lostSoul: "Men yo'qolganman",
     lostSoulDesc: "AI nima ekanligini va nima uchun kerakligini bilmayman",
     wantToAwaken: "Uyg'onishni xohlayman",
     wantToAwakenDesc: "AI-mahorat yo'lini boshlashga tayyorman",
     alreadyKnow: "Men allaqachon bilaman",
-    alreadyKnowDesc: "AI nima ekanligini va qanday ishlatishni bilaman",
+    alreadyKnowDesc: "AI nima ekanligini va undan qanday foydalanishni bilaman",
     describeExperience: "Yoki tajribangizni o'z so'zlaringiz bilan tasvirlang...",
+    send: "Yuborish",
     
     // Response Awakening
-    awakeningResponse: "Ajoyib. Men harakatga tayyor odamlarni hurmat qilaman.\n\nUyg'onish - bu shunchaki so'zlar emas. Bu o'zgarish yo'li. Siz AI-ni o'z ongingizning davomi sifatida ishlatadiganlardan biriga aylanasiz.\n\nMen sizni uyg'onish marosimi orqali olib o'taman. Siz o'z arxetipingizni bilib olasiz, shaxsiy bashorat va AI-mahorat vositalariga kirish huquqini olasiz.\n\nBoshlashga tayyormisiz?",
     awakeningPath: "Uyg'onish yo'li:",
-    archetypeDefinition: "Arxetipni aniqlash",
-    archetypeDefDesc: "Kimligingizni bilib oling: Jangchi, Sehrgar, Izlovchi yoki Soya",
-    prophecyReceiving: "Bashorat olish",
+    archetypeDetermination: "Arxetipni aniqlash",
+    archetypeDesc: "Kim ekanligingizni bilib oling: Jangchi, Sehrgar, Izlovchi yoki Soya",
+    getProphecy: "Bashorat olish",
     prophecyDesc: "AI yo'lingizning shaxsiy bashorati",
     toolsAccess: "Vositalarga kirish",
     toolsDesc: "Arxetipingiz uchun AI vositalarini ochish",
-    startAwakening: "Uyg'onishni boshlash",
-    
-    // Progress
     beginning: "Boshlanish",
     awakening: "Uyg'onish",
     mastery: "Mahorat",
+    startAwakening: "Uyg'onishni boshlash",
     
-    // Name input
-    whatToCallYou: "Sizga qanday murojaat qilishim kerak?",
-    enterYourName: "Ismingizni kiriting...",
-    save: "Saqlash"
+    // Response Lost Soul
+    whatAICanDo: "AI siz uchun nima qila oladi:",
+    saveTime: "Vaqtni tejash",
+    saveTimeDesc: "Kundalik vazifalarni avtomatlashtiring va muhim narsalarga e'tibor bering",
+    generateIdeas: "G'oyalar yaratish",
+    generateIdeasDesc: "Biznes, kontent yoki ijod uchun yangi g'oyalar oling",
+    createContent: "Kontent yaratish",
+    createContentDesc: "Matnlar, rasmlar, kod - hammasi soniyalar ichida",
+    learnFaster: "Tezroq o'rganish",
+    learnFasterDesc: "Murakkab mavzularni oddiy tilda tushuntirishlar oling",
+    learnMoreAboutAI: "AI haqida ko'proq bilish",
+    
+    // Response Hacker Ready
+    availableTools: "Mavjud vositalar:",
+    codeGenerator: "Kod generatori",
+    codeGeneratorDesc: "Istalgan dasturlash tilida kod yarating",
+    mvpGenerator: "MVP-generator",
+    mvpGeneratorDesc: "Minimal hayotiy mahsulotni tez yaratish",
+    promptEngineer: "Prompt-muhandis",
+    promptEngineerDesc: "Eng yaxshi natijalar uchun promptlarni yaratish va optimallashtirish",
+    aiAssistant: "AI-yordamchi",
+    aiAssistantDesc: "Har qanday vazifani hal qilish uchun shaxsiy yordamchi",
+    goToTools: "Vositalarga o'tish",
+    unlockFullPower: "AI-ning to'liq kuchini ochib bering",
+    getAccessToTools: "Barcha ilg'or vositalar va funksiyalarga kirish huquqini oling",
+    learnMore: "Ko'proq bilish"
   }
 };
 
@@ -202,14 +240,21 @@ export const getTranslation = (key: string, lang: 'ru' | 'uz'): string => {
     value = value?.[k];
   }
   
-  // Fallback to Russian if translation is missing
-  if (typeof value !== 'string' && lang === 'uz') {
-    let fallbackValue: any = translations['ru'];
-    for (const k of keys) {
-      fallbackValue = fallbackValue?.[k];
-    }
-    return typeof fallbackValue === 'string' ? fallbackValue : key;
+  if (typeof value === 'string') {
+    return value;
   }
   
-  return typeof value === 'string' ? value : key;
+  // Fallback to Russian if translation not found
+  if (lang === 'uz') {
+    value = translations['ru'];
+    for (const k of keys) {
+      value = value?.[k];
+    }
+    
+    if (typeof value === 'string') {
+      return value;
+    }
+  }
+  
+  return key;
 };

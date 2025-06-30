@@ -1,9 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Brain, ArrowRight, HelpCircle, Zap, Lightbulb } from 'lucide-react';
-import { getUserLanguage, setUserLanguage, translate } from '../lib/utils/i18n';
-import LanguageSwitcher from './LanguageSwitcher';
-import { logError } from '../lib/utils/errorLogger';
 
 interface ResponseLostSoulProps {
   onContinue: () => void;
@@ -16,71 +13,61 @@ const ResponseLostSoul: React.FC<ResponseLostSoulProps> = ({ onContinue, onBack 
   const [isTyping, setIsTyping] = useState(true);
   const [showContinue, setShowContinue] = useState(false);
   const [userName, setUserName] = useState('');
-  const [language, setLanguage] = useState(getUserLanguage());
-  const typingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const [language, setLanguage] = useState<'ru' | 'uz'>('ru');
 
-  // Get Trae's response based on language
+  // Load language preference
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const langParam = urlParams.get('lang');
+    
+    if (langParam === 'uz' || langParam === 'ru') {
+      setLanguage(langParam);
+    } else {
+      const savedLang = localStorage.getItem('neuropul_language');
+      if (savedLang === 'uz' || savedLang === 'ru') {
+        setLanguage(savedLang);
+      }
+    }
+  }, []);
+
+  // Trae's response to lost souls
   const getTraeMessage = () => {
     return language === 'ru' 
       ? "Не парься, бро. Все мы когда-то были потеряны. AI — это просто инструмент, как молоток или отвёртка, только для мозга.\n\nПредставь, что у тебя есть умный помощник, который может писать тексты, создавать картинки, анализировать данные и отвечать на вопросы. Это и есть AI.\n\nНе нужно быть программистом или гением. Просто скажи, что тебе нужно — и AI сделает это за тебя. Это как иметь суперсилу."
-      : "Xavotir olma, birodar. Hammamiz ham qachondir yo'qolgan edik. AI - bu shunchaki asbob, bolg'a yoki otvertka kabi, faqat miyangiz uchun.\n\nTasavvur qiling, sizda matnlarni yozadigan, rasmlar yaratadigan, ma'lumotlarni tahlil qiladigan va savollarga javob beradigan aqlli yordamchi bor. Bu AI.\n\nDasturchi yoki daho bo'lish shart emas. Shunchaki sizga nima kerakligini ayting - va AI buni siz uchun qiladi. Bu xuddi superkuchga ega bo'lish kabi.";
+      : "Xavotir olma, birodar. Hammamiz ham qachondir yo'qolgan edik. AI - bu shunchaki asbob, xuddi bolg'a yoki otvertka kabi, faqat miyangiz uchun.\n\nTasavvur qiling, sizda matnlarni yozadigan, rasmlar yaratadigan, ma'lumotlarni tahlil qiladigan va savollarga javob beradigan aqlli yordamchi bor. Bu AI.\n\nDasturchi yoki daho bo'lish shart emas. Shunchaki sizga nima kerakligini ayting - va AI buni siz uchun qiladi. Bu xuddi superkuchga ega bo'lish kabi.";
   };
 
   // Simulate typing effect
   useEffect(() => {
-    try {
-      setIsVisible(true);
-      
-      // Try to get user name from localStorage
-      const savedName = localStorage.getItem('neuropul_user_name');
-      if (savedName) {
-        setUserName(savedName);
-      }
-      
-      const traeMessage = getTraeMessage();
-      let currentText = '';
-      let currentIndex = 0;
-      
-      // Clear previous interval if exists
-      if (typingIntervalRef.current) {
-        clearInterval(typingIntervalRef.current);
-      }
-      
-      typingIntervalRef.current = setInterval(() => {
-        if (currentIndex < traeMessage.length) {
-          currentText += traeMessage[currentIndex];
-          setMessage(currentText);
-          currentIndex++;
-        } else {
-          if (typingIntervalRef.current) {
-            clearInterval(typingIntervalRef.current);
-            typingIntervalRef.current = null;
-          }
-          setIsTyping(false);
-          
-          // Show continue button after message is fully typed
-          setTimeout(() => {
-            setShowContinue(true);
-          }, 500);
-        }
-      }, 20); // Typing speed
-      
-      return () => {
-        if (typingIntervalRef.current) {
-          clearInterval(typingIntervalRef.current);
-          typingIntervalRef.current = null;
-        }
-      };
-    } catch (error) {
-      logError(error, {
-        component: 'ResponseLostSoul',
-        action: 'typingEffect'
-      });
-      // Fallback to static message
-      setMessage(getTraeMessage());
-      setIsTyping(false);
-      setShowContinue(true);
+    setIsVisible(true);
+    
+    // Try to get user name from localStorage
+    const savedName = localStorage.getItem('neuropul_user_name');
+    if (savedName) {
+      setUserName(savedName);
     }
+    
+    const traeMessage = getTraeMessage();
+    let currentText = '';
+    let currentIndex = 0;
+    
+    const typingInterval = setInterval(() => {
+      if (currentIndex < traeMessage.length) {
+        currentText += traeMessage[currentIndex];
+        setMessage(currentText);
+        currentIndex++;
+      } else {
+        clearInterval(typingInterval);
+        setIsTyping(false);
+        
+        // Show continue button after message is fully typed
+        setTimeout(() => {
+          setShowContinue(true);
+        }, 500);
+      }
+    }, 20); // Typing speed
+    
+    return () => clearInterval(typingInterval);
   }, [language]);
 
   // Sound effects with more cyberpunk feel
@@ -124,41 +111,27 @@ const ResponseLostSoul: React.FC<ResponseLostSoulProps> = ({ onContinue, onBack 
   };
 
   const handleContinue = () => {
-    try {
-      playSound('click');
-      vibrate([50, 30, 50]);
-      
-      // Save user experience level
-      localStorage.setItem('neuropul_user_experience', 'beginner');
-      localStorage.setItem('neuropul_user_path', 'lost');
-      
-      // Track progress
-      const visitCount = parseInt(localStorage.getItem('neuropul_visit_count') || '0');
-      localStorage.setItem('neuropul_visit_count', (visitCount + 1).toString());
-      
-      // Set flag for potential CTA later
-      localStorage.setItem('neuropul_viewed_messages', '1');
-      
-      onContinue();
-    } catch (error) {
-      logError(error, {
-        component: 'ResponseLostSoul',
-        action: 'handleContinue'
-      });
-    }
+    playSound('click');
+    vibrate([50, 30, 50]);
+    
+    // Save user experience level
+    localStorage.setItem('neuropul_user_experience', 'beginner');
+    localStorage.setItem('neuropul_user_path', 'lost');
+    
+    // Track progress
+    const visitCount = parseInt(localStorage.getItem('neuropul_visit_count') || '0');
+    localStorage.setItem('neuropul_visit_count', (visitCount + 1).toString());
+    
+    // Set flag for potential CTA later
+    localStorage.setItem('neuropul_viewed_messages', '1');
+    
+    onContinue();
   };
 
   const handleBack = () => {
-    try {
-      playSound('click');
-      vibrate([30]);
-      onBack();
-    } catch (error) {
-      logError(error, {
-        component: 'ResponseLostSoul',
-        action: 'handleBack'
-      });
-    }
+    playSound('click');
+    vibrate([30]);
+    onBack();
   };
 
   // Handle name input
@@ -166,25 +139,13 @@ const ResponseLostSoul: React.FC<ResponseLostSoulProps> = ({ onContinue, onBack 
   const [nameInput, setNameInput] = useState('');
 
   const handleNameSubmit = () => {
-    try {
-      if (nameInput.trim()) {
-        localStorage.setItem('neuropul_user_name', nameInput.trim());
-        setUserName(nameInput.trim());
-        setShowNameInput(false);
-        playSound('click');
-        vibrate([50, 30, 50]);
-      }
-    } catch (error) {
-      logError(error, {
-        component: 'ResponseLostSoul',
-        action: 'handleNameSubmit'
-      });
+    if (nameInput.trim()) {
+      localStorage.setItem('neuropul_user_name', nameInput.trim());
+      setUserName(nameInput.trim());
+      setShowNameInput(false);
+      playSound('click');
+      vibrate([50, 30, 50]);
     }
-  };
-
-  const handleLanguageChange = (newLanguage: 'ru' | 'uz') => {
-    setLanguage(newLanguage);
-    setUserLanguage(newLanguage);
   };
 
   return (
@@ -229,7 +190,19 @@ const ResponseLostSoul: React.FC<ResponseLostSoulProps> = ({ onContinue, onBack 
       
       {/* Language switcher */}
       <div className="absolute top-4 right-4 z-20">
-        <LanguageSwitcher onLanguageChange={handleLanguageChange} />
+        <button 
+          onClick={() => {
+            const newLang = language === 'ru' ? 'uz' : 'ru';
+            setLanguage(newLang);
+            localStorage.setItem('neuropul_language', newLang);
+            // Force reload to apply language change
+            window.location.href = `${window.location.pathname}?lang=${newLang}`;
+          }}
+          className="bg-black bg-opacity-50 text-white px-4 py-2 rounded-lg text-sm hover:bg-opacity-70 transition-colors"
+          aria-label={language === 'ru' ? 'Переключить на узбекский' : 'Rus tiliga o\'tish'}
+        >
+          {language === 'ru' ? 'O\'zbekcha' : 'Русский'}
+        </button>
       </div>
       
       <div className="relative z-10 max-w-3xl w-full">
@@ -290,7 +263,6 @@ const ResponseLostSoul: React.FC<ResponseLostSoulProps> = ({ onContinue, onBack 
                     onClick={() => setShowNameInput(true)}
                     className="text-cyan-400 hover:text-cyan-300 transition-colors text-sm"
                     aria-label={language === 'ru' ? 'Кстати, как тебя зовут?' : 'Aytgancha, ismingiz nima?'}
-                    role="button"
                   >
                     {language === 'ru' ? 'Кстати, как тебя зовут?' : 'Aytgancha, ismingiz nima?'}
                   </button>
@@ -317,7 +289,6 @@ const ResponseLostSoul: React.FC<ResponseLostSoulProps> = ({ onContinue, onBack 
                     onClick={handleNameSubmit}
                     className="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg transition-colors"
                     aria-label={language === 'ru' ? 'Сохранить' : 'Saqlash'}
-                    role="button"
                   >
                     {language === 'ru' ? 'Сохранить' : 'Saqlash'}
                   </button>
@@ -335,7 +306,9 @@ const ResponseLostSoul: React.FC<ResponseLostSoulProps> = ({ onContinue, onBack 
                   >
                     <h3 className="text-cyan-400 font-semibold mb-4 flex items-center font-['Orbitron',sans-serif]">
                       <Lightbulb className="w-5 h-5 mr-2" />
-                      {language === 'ru' ? 'Что AI может сделать для тебя:' : 'AI siz uchun nima qila oladi:'}
+                      {language === 'ru' 
+                        ? 'Что AI может сделать для тебя:' 
+                        : 'AI siz uchun nima qila oladi:'}
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <motion.div 
@@ -448,7 +421,6 @@ const ResponseLostSoul: React.FC<ResponseLostSoulProps> = ({ onContinue, onBack 
                       onMouseEnter={() => playSound('hover')}
                       className="px-6 py-3 bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white rounded-lg transition-colors flex items-center justify-center space-x-2 border border-gray-700 hover:border-purple-500 group relative overflow-hidden"
                       aria-label={language === 'ru' ? 'Назад' : 'Orqaga'}
-                      role="button"
                     >
                       {/* Button hover effect */}
                       <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-blue-600 opacity-0 group-hover:opacity-10 transition-opacity"></div>
@@ -462,7 +434,6 @@ const ResponseLostSoul: React.FC<ResponseLostSoulProps> = ({ onContinue, onBack 
                       onMouseEnter={() => playSound('hover')}
                       className="flex-1 px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-lg transition-colors flex items-center justify-center space-x-2 relative overflow-hidden group"
                       aria-label={language === 'ru' ? 'Хочу пробудиться' : 'Uyg\'onishni xohlayman'}
-                      role="button"
                     >
                       {/* Button glow effect */}
                       <div className="absolute -inset-1 bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg blur opacity-30 group-hover:opacity-50 transition-opacity"></div>
@@ -479,7 +450,6 @@ const ResponseLostSoul: React.FC<ResponseLostSoulProps> = ({ onContinue, onBack 
                       onMouseEnter={() => playSound('hover')}
                       className="px-6 py-3 bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white rounded-lg transition-colors flex items-center justify-center space-x-2 border border-gray-700 hover:border-purple-500 group relative overflow-hidden"
                       aria-label={language === 'ru' ? 'Узнать больше про AI' : 'AI haqida ko\'proq bilish'}
-                      role="button"
                       rel="noopener noreferrer"
                     >
                       {/* Button hover effect */}

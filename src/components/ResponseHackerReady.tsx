@@ -1,9 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Brain, ArrowRight, Code, Zap, Terminal, Lock } from 'lucide-react';
-import { getUserLanguage, setUserLanguage, translate } from '../lib/utils/i18n';
-import LanguageSwitcher from './LanguageSwitcher';
-import { logError } from '../lib/utils/errorLogger';
 
 interface ResponseHackerReadyProps {
   onContinue: () => void;
@@ -18,85 +15,75 @@ const ResponseHackerReady: React.FC<ResponseHackerReadyProps> = ({ onContinue, o
   const [userName, setUserName] = useState('');
   const [xp, setXp] = useState(0);
   const [isPaid, setIsPaid] = useState(false);
-  const [language, setLanguage] = useState(getUserLanguage());
-  const typingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const [language, setLanguage] = useState<'ru' | 'uz'>('ru');
 
-  // Get Trae's response based on language
+  // Load language preference
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const langParam = urlParams.get('lang');
+    
+    if (langParam === 'uz' || langParam === 'ru') {
+      setLanguage(langParam);
+    } else {
+      const savedLang = localStorage.getItem('neuropul_language');
+      if (savedLang === 'uz' || savedLang === 'ru') {
+        setLanguage(savedLang);
+      }
+    }
+  }, []);
+
+  // Trae's response to those who are already familiar with AI
   const getTraeMessage = () => {
     return language === 'ru' 
       ? "Вот это я понимаю. Хакер в доме.\n\nРаз ты уже в теме, давай без лишних слов. У меня есть набор продвинутых AI-инструментов, которые выведут твои навыки на новый уровень.\n\nМы определим твой архетип, чтобы персонализировать опыт. Затем ты получишь доступ к генераторам идей, кода, контента и многому другому.\n\nПлюс, тут есть система XP и уровней. Каждое использование AI приносит опыт и разблокирует новые возможности."
-      : "Mana buni tushunaman. Xaker uyda.\n\nAgar siz allaqachon mavzuni bilsangiz, ortiqcha so'zlarsiz davom etamiz. Menda sizning ko'nikmalaringizni yangi darajaga ko'taradigan ilg'or AI vositalari to'plami bor.\n\nTajribangizni shaxsiylashtirish uchun arxetipingizni aniqlaymiz. Keyin siz g'oyalar, kod, kontent generatorlari va boshqa ko'p narsalarga kirish huquqini olasiz.\n\nBundan tashqari, bu yerda XP va darajalar tizimi mavjud. AI-dan har bir foydalanish tajriba keltiradi va yangi imkoniyatlarni ochadi.";
+      : "Mana buni tushunaman. Xaker uyda.\n\nAgar siz allaqachon mavzuda bo'lsangiz, ortiqcha so'zlarsiz. Menda sizning ko'nikmalaringizni yangi darajaga ko'taradigan ilg'or AI vositalari to'plami bor.\n\nTajribani shaxsiylashtirish uchun arxetipingizni aniqlaymiz. Keyin siz g'oya, kod, kontent generatorlari va boshqa ko'p narsalarga kirish huquqini olasiz.\n\nBundan tashqari, bu yerda XP va darajalar tizimi mavjud. AI-dan har bir foydalanish tajriba keltiradi va yangi imkoniyatlarni ochadi.";
   };
 
   // Simulate typing effect
   useEffect(() => {
-    try {
-      setIsVisible(true);
-      
-      // Try to get user name from localStorage
-      const savedName = localStorage.getItem('neuropul_user_name');
-      if (savedName) {
-        setUserName(savedName);
-      }
-      
-      // Check if user has paid status
-      const userPaid = localStorage.getItem('neuropul_is_paid') === 'true';
-      setIsPaid(userPaid);
-      
-      const traeMessage = getTraeMessage();
-      let currentText = '';
-      let currentIndex = 0;
-      
-      // Clear previous interval if exists
-      if (typingIntervalRef.current) {
-        clearInterval(typingIntervalRef.current);
-      }
-      
-      typingIntervalRef.current = setInterval(() => {
-        if (currentIndex < traeMessage.length) {
-          currentText += traeMessage[currentIndex];
-          setMessage(currentText);
-          currentIndex++;
-        } else {
-          if (typingIntervalRef.current) {
-            clearInterval(typingIntervalRef.current);
-            typingIntervalRef.current = null;
-          }
-          setIsTyping(false);
-          
-          // Show continue button after message is fully typed
-          setTimeout(() => {
-            setShowContinue(true);
-            
-            // Award XP for reaching this step
-            const currentXp = parseInt(localStorage.getItem('neuropul_xp') || '0');
-            const newXp = currentXp + 15; // More XP for advanced users
-            localStorage.setItem('neuropul_xp', newXp.toString());
-            setXp(newXp);
-            
-            // Play XP sound
-            playSound('xp');
-            vibrate([50, 30, 50]);
-          }, 500);
-        }
-      }, 20); // Typing speed
-      
-      return () => {
-        if (typingIntervalRef.current) {
-          clearInterval(typingIntervalRef.current);
-          typingIntervalRef.current = null;
-        }
-      };
-    } catch (error) {
-      logError(error, {
-        component: 'ResponseHackerReady',
-        action: 'typingEffect'
-      });
-      // Fallback to static message
-      setMessage(getTraeMessage());
-      setIsTyping(false);
-      setShowContinue(true);
+    setIsVisible(true);
+    
+    // Try to get user name from localStorage
+    const savedName = localStorage.getItem('neuropul_user_name');
+    if (savedName) {
+      setUserName(savedName);
     }
+    
+    // Check if user has paid status
+    const userPaid = localStorage.getItem('neuropul_is_paid') === 'true';
+    setIsPaid(userPaid);
+    
+    const traeMessage = getTraeMessage();
+    let currentText = '';
+    let currentIndex = 0;
+    
+    const typingInterval = setInterval(() => {
+      if (currentIndex < traeMessage.length) {
+        currentText += traeMessage[currentIndex];
+        setMessage(currentText);
+        currentIndex++;
+      } else {
+        clearInterval(typingInterval);
+        setIsTyping(false);
+        
+        // Show continue button after message is fully typed
+        setTimeout(() => {
+          setShowContinue(true);
+          
+          // Award XP for reaching this step
+          const currentXp = parseInt(localStorage.getItem('neuropul_xp') || '0');
+          const newXp = currentXp + 15; // More XP for advanced users
+          localStorage.setItem('neuropul_xp', newXp.toString());
+          setXp(newXp);
+          
+          // Play XP sound
+          playSound('xp');
+          vibrate([50, 30, 50]);
+        }, 500);
+      }
+    }, 20); // Typing speed
+    
+    return () => clearInterval(typingInterval);
   }, [language]);
 
   // Sound effects with more cyberpunk feel
@@ -150,44 +137,30 @@ const ResponseHackerReady: React.FC<ResponseHackerReadyProps> = ({ onContinue, o
   };
 
   const handleContinue = () => {
-    try {
-      playSound('click');
-      vibrate([50, 30, 50]);
-      
-      // Save user experience level
-      localStorage.setItem('neuropul_user_experience', 'advanced');
-      localStorage.setItem('neuropul_user_path', 'ready');
-      
-      // Track progress
-      const visitCount = parseInt(localStorage.getItem('neuropul_visit_count') || '0');
-      localStorage.setItem('neuropul_visit_count', (visitCount + 1).toString());
-      
-      // Set flag for potential CTA later
-      localStorage.setItem('neuropul_viewed_messages', '3');
-      
-      // Set flag for advanced tools
-      localStorage.setItem('neuropul_advanced_tools_unlocked', 'true');
-      
-      onContinue();
-    } catch (error) {
-      logError(error, {
-        component: 'ResponseHackerReady',
-        action: 'handleContinue'
-      });
-    }
+    playSound('click');
+    vibrate([50, 30, 50]);
+    
+    // Save user experience level
+    localStorage.setItem('neuropul_user_experience', 'advanced');
+    localStorage.setItem('neuropul_user_path', 'ready');
+    
+    // Track progress
+    const visitCount = parseInt(localStorage.getItem('neuropul_visit_count') || '0');
+    localStorage.setItem('neuropul_visit_count', (visitCount + 1).toString());
+    
+    // Set flag for potential CTA later
+    localStorage.setItem('neuropul_viewed_messages', '3');
+    
+    // Set flag for advanced tools
+    localStorage.setItem('neuropul_advanced_tools_unlocked', 'true');
+    
+    onContinue();
   };
 
   const handleBack = () => {
-    try {
-      playSound('click');
-      vibrate([30]);
-      onBack();
-    } catch (error) {
-      logError(error, {
-        component: 'ResponseHackerReady',
-        action: 'handleBack'
-      });
-    }
+    playSound('click');
+    vibrate([30]);
+    onBack();
   };
 
   // Handle name input
@@ -195,31 +168,19 @@ const ResponseHackerReady: React.FC<ResponseHackerReadyProps> = ({ onContinue, o
   const [nameInput, setNameInput] = useState('');
 
   const handleNameSubmit = () => {
-    try {
-      if (nameInput.trim()) {
-        localStorage.setItem('neuropul_user_name', nameInput.trim());
-        setUserName(nameInput.trim());
-        setShowNameInput(false);
-        playSound('click');
-        vibrate([50, 30, 50]);
-        
-        // Award XP for setting name
-        const currentXp = parseInt(localStorage.getItem('neuropul_xp') || '0');
-        const newXp = currentXp + 5;
-        localStorage.setItem('neuropul_xp', newXp.toString());
-        setXp(newXp);
-      }
-    } catch (error) {
-      logError(error, {
-        component: 'ResponseHackerReady',
-        action: 'handleNameSubmit'
-      });
+    if (nameInput.trim()) {
+      localStorage.setItem('neuropul_user_name', nameInput.trim());
+      setUserName(nameInput.trim());
+      setShowNameInput(false);
+      playSound('click');
+      vibrate([50, 30, 50]);
+      
+      // Award XP for setting name
+      const currentXp = parseInt(localStorage.getItem('neuropul_xp') || '0');
+      const newXp = currentXp + 5;
+      localStorage.setItem('neuropul_xp', newXp.toString());
+      setXp(newXp);
     }
-  };
-
-  const handleLanguageChange = (newLanguage: 'ru' | 'uz') => {
-    setLanguage(newLanguage);
-    setUserLanguage(newLanguage);
   };
 
   return (
@@ -270,7 +231,19 @@ const ResponseHackerReady: React.FC<ResponseHackerReadyProps> = ({ onContinue, o
       
       {/* Language switcher */}
       <div className="absolute top-4 right-4 z-20">
-        <LanguageSwitcher onLanguageChange={handleLanguageChange} />
+        <button 
+          onClick={() => {
+            const newLang = language === 'ru' ? 'uz' : 'ru';
+            setLanguage(newLang);
+            localStorage.setItem('neuropul_language', newLang);
+            // Force reload to apply language change
+            window.location.href = `${window.location.pathname}?lang=${newLang}`;
+          }}
+          className="bg-black bg-opacity-50 text-white px-4 py-2 rounded-lg text-sm hover:bg-opacity-70 transition-colors"
+          aria-label={language === 'ru' ? 'Переключить на узбекский' : 'Rus tiliga o\'tish'}
+        >
+          {language === 'ru' ? 'O\'zbekcha' : 'Русский'}
+        </button>
       </div>
       
       <div className="relative z-10 max-w-3xl w-full">
@@ -333,9 +306,10 @@ const ResponseHackerReady: React.FC<ResponseHackerReadyProps> = ({ onContinue, o
                     onClick={() => setShowNameInput(true)}
                     className="text-cyan-400 hover:text-cyan-300 transition-colors text-sm"
                     aria-label={language === 'ru' ? 'Как мне к тебе обращаться, хакер?' : 'Sizga qanday murojaat qilishim kerak, xaker?'}
-                    role="button"
                   >
-                    {language === 'ru' ? 'Как мне к тебе обращаться, хакер?' : 'Sizga qanday murojaat qilishim kerak, xaker?'}
+                    {language === 'ru' 
+                      ? 'Как мне к тебе обращаться, хакер?' 
+                      : 'Sizga qanday murojaat qilishim kerak, xaker?'}
                   </button>
                 </motion.div>
               )}
@@ -350,7 +324,9 @@ const ResponseHackerReady: React.FC<ResponseHackerReadyProps> = ({ onContinue, o
                     type="text"
                     value={nameInput}
                     onChange={(e) => setNameInput(e.target.value)}
-                    placeholder={language === 'ru' ? 'Введи своё имя или хендл...' : 'Ismingizni yoki taxallusingizni kiriting...'}
+                    placeholder={language === 'ru' 
+                      ? 'Введи своё имя или хендл...' 
+                      : 'Ismingizni yoki taxallusingizni kiriting...'}
                     className="flex-1 bg-gray-800 border border-gray-700 focus:border-cyan-500 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none"
                     onKeyPress={(e) => e.key === 'Enter' && handleNameSubmit()}
                     autoFocus
@@ -360,7 +336,6 @@ const ResponseHackerReady: React.FC<ResponseHackerReadyProps> = ({ onContinue, o
                     onClick={handleNameSubmit}
                     className="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg transition-colors"
                     aria-label={language === 'ru' ? 'Сохранить' : 'Saqlash'}
-                    role="button"
                   >
                     {language === 'ru' ? 'Сохранить' : 'Saqlash'}
                   </button>
@@ -516,7 +491,6 @@ const ResponseHackerReady: React.FC<ResponseHackerReadyProps> = ({ onContinue, o
                       onMouseEnter={() => playSound('hover')}
                       className="px-6 py-3 bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white rounded-lg transition-colors flex items-center justify-center space-x-2 border border-gray-700 hover:border-purple-500 group relative overflow-hidden"
                       aria-label={language === 'ru' ? 'Назад' : 'Orqaga'}
-                      role="button"
                     >
                       {/* Button hover effect */}
                       <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-blue-600 opacity-0 group-hover:opacity-10 transition-opacity"></div>
@@ -530,7 +504,6 @@ const ResponseHackerReady: React.FC<ResponseHackerReadyProps> = ({ onContinue, o
                       onMouseEnter={() => playSound('hover')}
                       className="flex-1 px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-lg transition-colors flex items-center justify-center space-x-2 relative overflow-hidden group"
                       aria-label={language === 'ru' ? 'Перейти к инструментам' : 'Vositalarga o\'tish'}
-                      role="button"
                     >
                       {/* Button glow effect */}
                       <div className="absolute -inset-1 bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg blur opacity-30 group-hover:opacity-50 transition-opacity"></div>
@@ -576,7 +549,6 @@ const ResponseHackerReady: React.FC<ResponseHackerReadyProps> = ({ onContinue, o
                         }}
                         className="text-sm bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-500 hover:to-orange-500 text-white px-4 py-2 rounded-lg transition-colors inline-flex items-center space-x-2"
                         aria-label={language === 'ru' ? 'Узнать больше' : 'Ko\'proq bilish'}
-                        role="button"
                       >
                         <Zap className="w-4 h-4" />
                         <span>

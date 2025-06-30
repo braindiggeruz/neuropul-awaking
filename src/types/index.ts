@@ -9,21 +9,21 @@ export interface UserProgress {
   createdAt: string;
   lastActive: string;
   userName?: string; // For backward compatibility
-  language?: 'ru' | 'uz';
-  soundEnabled?: boolean;
-  vibrationEnabled?: boolean;
   dailyStreak?: number;
   lastVisit?: string;
   toolsUsed?: string[];
   isPremium?: boolean;
   premiumTier?: 'none' | 'basic' | 'pro' | 'master';
-  hasSeenFomo?: boolean;
   fomoStart?: string | null;
-  questStep?: number;
+  hasSeenFomo?: boolean;
+  soundEnabled?: boolean;
+  vibrationEnabled?: boolean;
+  language?: 'ru' | 'uz';
+  refCode?: string | null;
   referralUsed?: boolean;
   dailyXPDate?: string;
   certificateIssued?: boolean;
-  refCode?: string | null;
+  questStep?: number;
   version?: string;
 }
 

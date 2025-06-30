@@ -1,9 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Brain, Zap, Skull, Rocket, PenIcon as AlienIcon } from 'lucide-react';
-import { getUserLanguage, setUserLanguage } from '../lib/utils/i18n';
-import LanguageSwitcher from './LanguageSwitcher';
-import { logError } from '../lib/utils/errorLogger';
 
 interface TraeAwakensProps {
   onPathSelect: (path: 'lost' | 'awakening' | 'ready') => void;
@@ -15,96 +12,95 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
   const [isTyping, setIsTyping] = useState(true);
   const [showOptions, setShowOptions] = useState(false);
   const [userPath, setUserPath] = useState<string | null>(null);
-  const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const [language, setLanguage] = useState(getUserLanguage());
+  const [inactivityTimer, setInactivityTimer] = useState<NodeJS.Timeout | null>(null);
+  const [language, setLanguage] = useState<'ru' | 'uz'>('ru');
 
-  // Get Trae's messages based on language
+  // Determine language from URL or localStorage
+  useEffect(() => {
+    // Check URL parameter first
+    const urlParams = new URLSearchParams(window.location.search);
+    const langParam = urlParams.get('lang');
+    
+    if (langParam === 'uz' || langParam === 'ru') {
+      setLanguage(langParam);
+      localStorage.setItem('neuropul_language', langParam);
+    } else {
+      // Check localStorage
+      const savedLang = localStorage.getItem('neuropul_language');
+      if (savedLang === 'uz' || savedLang === 'ru') {
+        setLanguage(savedLang);
+      } else {
+        // Try browser language
+        const browserLang = navigator.language.startsWith('uz') ? 'uz' : 'ru';
+        setLanguage(browserLang);
+        localStorage.setItem('neuropul_language', browserLang);
+      }
+    }
+  }, []);
+
+  // Trae's initial message based on language
   const getTraeMessage = () => {
     return language === 'ru' 
       ? "Ты здесь. Наконец-то. Я Trae — твой проводник в мире AI. Не буду тратить время на формальности. Мне нужно знать только одно..."
-      : "Sen bu yerdasanmi. Nihoyat. Men Trae — AI dunyosidagi yo'lboshchingman. Rasmiyatchilikka vaqt sarflamayman. Menga faqat bitta narsa kerak...";
+      : "Sen bu yerdasаn. Nihoyat. Men Trae — AI dunyosidagi yo'lboshchingman. Rasmiyatchilikka vaqt sarflamayman. Menga faqat bitta narsa bilish kerak...";
   };
-  
+
   const getTraeQuestion = () => {
     return language === 'ru' ? "Кто ты?" : "Sen kimsan?";
   };
 
   // Simulate typing effect
   useEffect(() => {
-    try {
-      setIsVisible(true);
-      
-      const traeMessage = getTraeMessage();
-      const traeQuestion = getTraeQuestion();
-      
-      let currentText = '';
-      let currentIndex = 0;
-      
-      const typingInterval = setInterval(() => {
-        if (currentIndex < traeMessage.length) {
-          currentText += traeMessage[currentIndex];
-          setMessage(currentText);
-          currentIndex++;
-        } else {
-          clearInterval(typingInterval);
-          setIsTyping(false);
-          
-          // Show the question after a short delay
-          setTimeout(() => {
-            setMessage(prev => `${prev}\n\n${traeQuestion}`);
-            
-            // Show options after another delay
-            setTimeout(() => {
-              setShowOptions(true);
-              
-              // Set inactivity timer
-              if (inactivityTimerRef.current) {
-                clearTimeout(inactivityTimerRef.current);
-              }
-              
-              inactivityTimerRef.current = setTimeout(() => {
-                if (!userPath) {
-                  const reminderText = language === 'ru' 
-                    ? `${traeMessage}\n\n${traeQuestion}\n\nЭй, ты ещё здесь? Выбери свой путь, чтобы мы могли начать.`
-                    : `${traeMessage}\n\n${traeQuestion}\n\nHey, hali ham shu yerdamisan? Boshlashimiz uchun yo'lingni tanla.`;
-                  setMessage(reminderText);
-                  playSound('hover');
-                  vibrate([100, 50, 100]);
-                }
-              }, 15000); // 15 seconds
-            }, 1000);
-          }, 500);
-        }
-      }, 30); // Typing speed
-      
-      return () => {
+    setIsVisible(true);
+    
+    const traeMessage = getTraeMessage();
+    let currentText = '';
+    let currentIndex = 0;
+    
+    const typingInterval = setInterval(() => {
+      if (currentIndex < traeMessage.length) {
+        currentText += traeMessage[currentIndex];
+        setMessage(currentText);
+        currentIndex++;
+      } else {
         clearInterval(typingInterval);
-        if (inactivityTimerRef.current) {
-          clearTimeout(inactivityTimerRef.current);
-          inactivityTimerRef.current = null;
-        }
-      };
-    } catch (error) {
-      logError(error, {
-        component: 'TraeAwakens',
-        action: 'typingEffect'
-      });
-      // Fallback to static message
-      setMessage(getTraeMessage() + "\n\n" + getTraeQuestion());
-      setIsTyping(false);
-      setShowOptions(true);
-    }
+        setIsTyping(false);
+        
+        // Show the question after a short delay
+        setTimeout(() => {
+          setMessage(prev => `${prev}\n\n${getTraeQuestion()}`);
+          
+          // Show options after another delay
+          setTimeout(() => {
+            setShowOptions(true);
+            
+            // Set inactivity timer
+            const timer = setTimeout(() => {
+              if (!userPath) {
+                setMessage(prev => `${prev}\n\n${language === 'ru' ? 'Эй, ты ещё здесь? Выбери свой путь, чтобы мы могли начать.' : 'Hey, hali ham shu yerdamisan? Boshlashimiz uchun yo\'lingni tanla.'}`);
+                playSound('hover');
+                vibrate([100, 50, 100]);
+              }
+            }, 15000); // 15 seconds
+            
+            setInactivityTimer(timer);
+          }, 1000);
+        }, 500);
+      }
+    }, 30); // Typing speed
+    
+    return () => {
+      clearInterval(typingInterval);
+      if (inactivityTimer) clearTimeout(inactivityTimer);
+    };
   }, [language]);
 
   // Clean up inactivity timer when component unmounts
   useEffect(() => {
     return () => {
-      if (inactivityTimerRef.current) {
-        clearTimeout(inactivityTimerRef.current);
-        inactivityTimerRef.current = null;
-      }
+      if (inactivityTimer) clearTimeout(inactivityTimer);
     };
-  }, []);
+  }, [inactivityTimer]);
 
   // Sound effects with more cyberpunk feel
   const playSound = (type: 'click' | 'hover') => {
@@ -147,33 +143,22 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
   };
 
   const handleOptionClick = (path: 'lost' | 'awakening' | 'ready') => {
-    try {
-      // Clear inactivity timer
-      if (inactivityTimerRef.current) {
-        clearTimeout(inactivityTimerRef.current);
-        inactivityTimerRef.current = null;
-      }
-      
-      // Save user path to localStorage for future reference
-      localStorage.setItem('neuropul_user_path', path);
-      localStorage.setItem('neuropul_first_visit_date', new Date().toISOString());
-      
-      // Set user path in state
-      setUserPath(path);
-      
-      // Play sound and vibrate
-      playSound('click');
-      vibrate([50, 30, 50]);
-      
-      // Call the onPathSelect callback
-      onPathSelect(path);
-    } catch (error) {
-      logError(error, {
-        component: 'TraeAwakens',
-        action: 'handleOptionClick',
-        additionalData: { path }
-      });
-    }
+    // Clear inactivity timer
+    if (inactivityTimer) clearTimeout(inactivityTimer);
+    
+    // Save user path to localStorage for future reference
+    localStorage.setItem('neuropul_user_path', path);
+    localStorage.setItem('neuropul_first_visit_date', new Date().toISOString());
+    
+    // Set user path in state
+    setUserPath(path);
+    
+    // Play sound and vibrate
+    playSound('click');
+    vibrate([50, 30, 50]);
+    
+    // Call the onPathSelect callback
+    onPathSelect(path);
   };
 
   // Handle custom user input
@@ -181,38 +166,73 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
   const [showInput, setShowInput] = useState(false);
 
   const handleCustomInput = () => {
-    try {
-      if (userInput.trim()) {
-        // Process user input to determine path
-        const input = userInput.toLowerCase();
-        let detectedPath: 'lost' | 'awakening' | 'ready' = 'awakening'; // Default
-        
-        if (input.includes('не знаю') || input.includes('потерян') || input.includes('новичок') || 
-            input.includes('bilmayman') || input.includes('yo\'qolgan') || input.includes('yangi')) {
-          detectedPath = 'lost';
-        } else if (input.includes('опыт') || input.includes('знаю') || input.includes('эксперт') ||
-                  input.includes('tajriba') || input.includes('bilaman') || input.includes('ekspert')) {
-          detectedPath = 'ready';
-        }
-        
-        // Save user input for context
-        localStorage.setItem('neuropul_user_input', userInput);
-        
-        // Handle the detected path
-        handleOptionClick(detectedPath);
+    if (userInput.trim()) {
+      // Process user input to determine path
+      const input = userInput.toLowerCase();
+      let detectedPath: 'lost' | 'awakening' | 'ready' = 'awakening'; // Default
+      
+      if (input.includes('не знаю') || input.includes('потерян') || input.includes('новичок') || 
+          input.includes('bilmayman') || input.includes('yo\'qolgan') || input.includes('yangi')) {
+        detectedPath = 'lost';
+      } else if (input.includes('опыт') || input.includes('знаю') || input.includes('эксперт') ||
+                input.includes('tajriba') || input.includes('bilaman') || input.includes('ekspert')) {
+        detectedPath = 'ready';
       }
-    } catch (error) {
-      logError(error, {
-        component: 'TraeAwakens',
-        action: 'handleCustomInput',
-        additionalData: { userInput }
-      });
+      
+      // Save user input for context
+      localStorage.setItem('neuropul_user_input', userInput);
+      
+      // Handle the detected path
+      handleOptionClick(detectedPath);
     }
   };
 
-  const handleLanguageChange = (newLanguage: 'ru' | 'uz') => {
-    setLanguage(newLanguage);
-    setUserLanguage(newLanguage);
+  // Language switcher
+  const toggleLanguage = () => {
+    const newLang = language === 'ru' ? 'uz' : 'ru';
+    setLanguage(newLang);
+    localStorage.setItem('neuropul_language', newLang);
+    
+    // Reset state to restart with new language
+    setIsTyping(true);
+    setMessage('');
+    setShowOptions(false);
+    
+    // Clear any existing timers
+    if (inactivityTimer) {
+      clearTimeout(inactivityTimer);
+      setInactivityTimer(null);
+    }
+    
+    // Restart the typing effect with new language
+    const traeMessage = newLang === 'ru' 
+      ? "Ты здесь. Наконец-то. Я Trae — твой проводник в мире AI. Не буду тратить время на формальности. Мне нужно знать только одно..."
+      : "Sen bu yerdasаn. Nihoyat. Men Trae — AI dunyosidagi yo'lboshchingman. Rasmiyatchilikka vaqt sarflamayman. Menga faqat bitta narsa bilish kerak...";
+    
+    let currentText = '';
+    let currentIndex = 0;
+    
+    const typingInterval = setInterval(() => {
+      if (currentIndex < traeMessage.length) {
+        currentText += traeMessage[currentIndex];
+        setMessage(currentText);
+        currentIndex++;
+      } else {
+        clearInterval(typingInterval);
+        setIsTyping(false);
+        
+        // Show the question after a short delay
+        setTimeout(() => {
+          const traeQuestion = newLang === 'ru' ? "Кто ты?" : "Sen kimsan?";
+          setMessage(prev => `${prev}\n\n${traeQuestion}`);
+          
+          // Show options after another delay
+          setTimeout(() => {
+            setShowOptions(true);
+          }, 1000);
+        }, 500);
+      }
+    }, 30);
   };
 
   return (
@@ -257,7 +277,13 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
       
       {/* Language switcher */}
       <div className="absolute top-4 right-4 z-20">
-        <LanguageSwitcher onLanguageChange={handleLanguageChange} />
+        <button 
+          onClick={toggleLanguage}
+          className="bg-black bg-opacity-50 text-white px-4 py-2 rounded-lg text-sm hover:bg-opacity-70 transition-colors"
+          aria-label={language === 'ru' ? 'Переключить на узбекский' : 'Rus tiliga o\'tish'}
+        >
+          {language === 'ru' ? 'O\'zbekcha' : 'Русский'}
+        </button>
       </div>
       
       <div className="relative z-10 max-w-3xl w-full">
@@ -323,7 +349,6 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
                       onMouseEnter={() => playSound('hover')}
                       className="w-full p-4 bg-gray-800 hover:bg-gray-700 border border-gray-700 hover:border-purple-500 rounded-xl transition-all duration-300 flex items-center space-x-3 group relative overflow-hidden"
                       aria-label={language === 'ru' ? 'Я потерян' : 'Men yo\'qolganman'}
-                      role="button"
                     >
                       {/* Hover effect */}
                       <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-blue-600 opacity-0 group-hover:opacity-10 transition-opacity"></div>
@@ -351,7 +376,6 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
                       onMouseEnter={() => playSound('hover')}
                       className="w-full p-4 bg-gradient-to-r from-purple-900 to-blue-900 hover:from-purple-800 hover:to-blue-800 border border-purple-700 hover:border-purple-500 rounded-xl transition-all duration-300 flex items-center space-x-3 group relative overflow-hidden"
                       aria-label={language === 'ru' ? 'Хочу пробудиться' : 'Uyg\'onishni xohlayman'}
-                      role="button"
                     >
                       {/* Animated highlight effect */}
                       <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-blue-500 opacity-0 group-hover:opacity-20 transition-opacity"></div>
@@ -380,7 +404,6 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
                       onMouseEnter={() => playSound('hover')}
                       className="w-full p-4 bg-gray-800 hover:bg-gray-700 border border-gray-700 hover:border-purple-500 rounded-xl transition-all duration-300 flex items-center space-x-3 group relative overflow-hidden"
                       aria-label={language === 'ru' ? 'Я уже в теме' : 'Men allaqachon bilaman'}
-                      role="button"
                     >
                       {/* Hover effect */}
                       <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-blue-600 opacity-0 group-hover:opacity-10 transition-opacity"></div>
@@ -395,7 +418,7 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
                         <p className="text-gray-400 text-sm">
                           {language === 'ru' 
                             ? 'Знаю, что такое AI и как его использовать' 
-                            : 'AI nima ekanligini va qanday ishlatishni bilaman'}
+                            : 'AI nima ekanligini va undan qanday foydalanishni bilaman'}
                         </p>
                       </div>
                     </motion.button>
@@ -412,8 +435,7 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
                           onClick={() => setShowInput(true)}
                           onMouseEnter={() => playSound('hover')}
                           className="text-purple-400 hover:text-purple-300 text-sm transition-colors flex items-center mx-auto"
-                          aria-label={language === 'ru' ? 'Описать свой опыт' : 'Tajribangizni tasvirlang'}
-                          role="button"
+                          aria-label={language === 'ru' ? 'Описать свой опыт своими словами' : 'Tajribangizni o\'z so\'zlaringiz bilan tasvirlang'}
                         >
                           <span>
                             {language === 'ru' 
@@ -439,7 +461,6 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
                             onMouseEnter={() => playSound('hover')}
                             className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
                             aria-label={language === 'ru' ? 'Отправить' : 'Yuborish'}
-                            role="button"
                           >
                             {language === 'ru' ? 'Отправить' : 'Yuborish'}
                           </button>

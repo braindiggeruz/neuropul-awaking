@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Brain, ArrowRight, Zap, Sparkles } from 'lucide-react';
+import { logError } from '../lib/utils/errorLogger';
 
 interface ResponseAwakeningProps {
   onContinue: () => void;
@@ -15,19 +16,36 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
   const [userName, setUserName] = useState('');
   const [xp, setXp] = useState(0);
   const [language, setLanguage] = useState<'ru' | 'uz'>('ru');
+  const [isNavigating, setIsNavigating] = useState(false);
 
   // Load language preference
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const langParam = urlParams.get('lang');
-    
-    if (langParam === 'uz' || langParam === 'ru') {
-      setLanguage(langParam);
-    } else {
-      const savedLang = localStorage.getItem('neuropul_language');
-      if (savedLang === 'uz' || savedLang === 'ru') {
-        setLanguage(savedLang);
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const langParam = urlParams.get('lang');
+      
+      if (langParam === 'uz' || langParam === 'ru') {
+        setLanguage(langParam);
+        console.log(`Language set from URL: ${langParam}`);
+      } else {
+        const savedLang = localStorage.getItem('neuropul_language');
+        if (savedLang === 'uz' || savedLang === 'ru') {
+          setLanguage(savedLang);
+          console.log(`Language set from localStorage: ${savedLang}`);
+        } else {
+          // Default to Russian
+          setLanguage('ru');
+          console.log('Language defaulted to Russian');
+        }
       }
+    } catch (error) {
+      console.error('Error loading language preference:', error);
+      logError(error, {
+        component: 'ResponseAwakening',
+        action: 'loadLanguage'
+      });
+      // Default to Russian on error
+      setLanguage('ru');
     }
   }, []);
 
@@ -40,45 +58,59 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
 
   // Simulate typing effect
   useEffect(() => {
-    setIsVisible(true);
-    
-    // Try to get user name from localStorage
-    const savedName = localStorage.getItem('neuropul_user_name');
-    if (savedName) {
-      setUserName(savedName);
-    }
-    
-    const traeMessage = getTraeMessage();
-    let currentText = '';
-    let currentIndex = 0;
-    
-    const typingInterval = setInterval(() => {
-      if (currentIndex < traeMessage.length) {
-        currentText += traeMessage[currentIndex];
-        setMessage(currentText);
-        currentIndex++;
-      } else {
-        clearInterval(typingInterval);
-        setIsTyping(false);
-        
-        // Show continue button after message is fully typed
-        setTimeout(() => {
-          setShowContinue(true);
-          
-          // Award XP for reaching this step
-          const currentXp = parseInt(localStorage.getItem('neuropul_xp') || '0');
-          const newXp = currentXp + 10;
-          localStorage.setItem('neuropul_xp', newXp.toString());
-          setXp(newXp);
-          
-          // Play XP sound
-          playSound('xp');
-          vibrate([50, 30, 50]);
-        }, 500);
+    try {
+      setIsVisible(true);
+      
+      // Try to get user name from localStorage
+      const savedName = localStorage.getItem('neuropul_user_name');
+      if (savedName) {
+        setUserName(savedName);
+        console.log(`User name loaded: ${savedName}`);
       }
-    }, 20); // Typing speed
-    
-    return () => clearInterval(typingInterval);
+      
+      const traeMessage = getTraeMessage();
+      let currentText = '';
+      let currentIndex = 0;
+      
+      const typingInterval = setInterval(() => {
+        if (currentIndex < traeMessage.length) {
+          currentText += traeMessage[currentIndex];
+          setMessage(currentText);
+          currentIndex++;
+        } else {
+          clearInterval(typingInterval);
+          setIsTyping(false);
+          
+          // Show continue button after message is fully typed
+          setTimeout(() => {
+            setShowContinue(true);
+            
+            // Award XP for reaching this step
+            const currentXp = parseInt(localStorage.getItem('neuropul_xp') || '0');
+            const newXp = currentXp + 10;
+            localStorage.setItem('neuropul_xp', newXp.toString());
+            setXp(newXp);
+            
+            // Play XP sound
+            playSound('xp');
+            vibrate([50, 30, 50]);
+          }, 500);
+        }
+      }, 20); // Typing speed
+      
+      return () => clearInterval(typingInterval);
+    } catch (error) {
+      console.error('Error in typing effect:', error);
+      logError(error, {
+        component: 'ResponseAwakening',
+        action: 'typingEffect'
+      });
+      
+      // Fallback to show message immediately
+      setMessage(getTraeMessage());
+      setIsTyping(false);
+      setShowContinue(true);
+    }
   }, [language]);
 
   // Sound effects with more cyberpunk feel
@@ -120,42 +152,91 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
         oscillator.stop(audioContext.currentTime + 0.1);
       }
     } catch (error) {
-      console.log('Audio not supported');
+      console.error('Audio not supported:', error);
     }
   };
 
   // Vibration feedback
   const vibrate = (pattern: number[]) => {
-    if (navigator.vibrate) {
-      navigator.vibrate(pattern);
+    try {
+      if (navigator.vibrate) {
+        navigator.vibrate(pattern);
+      }
+    } catch (error) {
+      console.error('Vibration not supported:', error);
     }
   };
 
   const handleContinue = () => {
-    playSound('click');
-    vibrate([50, 30, 50]);
-    
-    // Save user experience level
-    localStorage.setItem('neuropul_user_experience', 'intermediate');
-    localStorage.setItem('neuropul_user_path', 'awakening');
-    
-    // Track progress
-    const visitCount = parseInt(localStorage.getItem('neuropul_visit_count') || '0');
-    localStorage.setItem('neuropul_visit_count', (visitCount + 1).toString());
-    
-    // Set flag for potential CTA later
-    localStorage.setItem('neuropul_viewed_messages', '2');
-    
-    // Set flag for awakening
-    localStorage.setItem('neuropul_awakening_started', 'true');
-    
-    onContinue();
+    try {
+      if (isNavigating) {
+        console.log('Navigation already in progress, ignoring');
+        return;
+      }
+      
+      console.log('Continue button clicked');
+      setIsNavigating(true);
+      
+      playSound('click');
+      vibrate([50, 30, 50]);
+      
+      // Save user experience level
+      localStorage.setItem('neuropul_user_experience', 'intermediate');
+      localStorage.setItem('neuropul_user_path', 'awakening');
+      
+      // Track progress
+      const visitCount = parseInt(localStorage.getItem('neuropul_visit_count') || '0');
+      localStorage.setItem('neuropul_visit_count', (visitCount + 1).toString());
+      
+      // Set flag for potential CTA later
+      localStorage.setItem('neuropul_viewed_messages', '2');
+      
+      // Set flag for awakening
+      localStorage.setItem('neuropul_awakening_started', 'true');
+      
+      // Call onContinue with a small delay
+      setTimeout(() => {
+        onContinue();
+      }, 100);
+    } catch (error) {
+      console.error('Error in handleContinue:', error);
+      logError(error, {
+        component: 'ResponseAwakening',
+        action: 'handleContinue'
+      });
+      
+      // Reset navigation state
+      setIsNavigating(false);
+    }
   };
 
   const handleBack = () => {
-    playSound('click');
-    vibrate([30]);
-    onBack();
+    try {
+      if (isNavigating) {
+        console.log('Navigation already in progress, ignoring');
+        return;
+      }
+      
+      console.log('Back button clicked');
+      setIsNavigating(true);
+      
+      playSound('click');
+      vibrate([30]);
+      
+      // Call onBack with a small delay
+      setTimeout(() => {
+        onBack();
+      }, 100);
+    } catch (error) {
+      console.error('Error in handleBack:', error);
+      logError(error, {
+        component: 'ResponseAwakening',
+        action: 'handleBack'
+      });
+      
+      // Reset navigation state
+      setIsNavigating(false);
+    }
   };
 
   // Handle name input
@@ -163,18 +244,26 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
   const [nameInput, setNameInput] = useState('');
 
   const handleNameSubmit = () => {
-    if (nameInput.trim()) {
-      localStorage.setItem('neuropul_user_name', nameInput.trim());
-      setUserName(nameInput.trim());
-      setShowNameInput(false);
-      playSound('click');
-      vibrate([50, 30, 50]);
-      
-      // Award XP for setting name
-      const currentXp = parseInt(localStorage.getItem('neuropul_xp') || '0');
-      const newXp = currentXp + 5;
-      localStorage.setItem('neuropul_xp', newXp.toString());
-      setXp(newXp);
+    try {
+      if (nameInput.trim()) {
+        localStorage.setItem('neuropul_user_name', nameInput.trim());
+        setUserName(nameInput.trim());
+        setShowNameInput(false);
+        playSound('click');
+        vibrate([50, 30, 50]);
+        
+        // Award XP for setting name
+        const currentXp = parseInt(localStorage.getItem('neuropul_xp') || '0');
+        const newXp = currentXp + 5;
+        localStorage.setItem('neuropul_xp', newXp.toString());
+        setXp(newXp);
+      }
+    } catch (error) {
+      console.error('Error in handleNameSubmit:', error);
+      logError(error, {
+        component: 'ResponseAwakening',
+        action: 'handleNameSubmit'
+      });
     }
   };
 
@@ -231,11 +320,14 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
             const newLang = language === 'ru' ? 'uz' : 'ru';
             setLanguage(newLang);
             localStorage.setItem('neuropul_language', newLang);
-            // Force reload to apply language change
-            window.location.href = `${window.location.pathname}?lang=${newLang}`;
+            // Update URL with language parameter
+            const url = new URL(window.location.href);
+            url.searchParams.set('lang', newLang);
+            window.history.replaceState({}, '', url.toString());
           }}
           className="bg-black bg-opacity-50 text-white px-4 py-2 rounded-lg text-sm hover:bg-opacity-70 transition-colors"
           aria-label={language === 'ru' ? 'Переключить на узбекский' : 'Rus tiliga o\'tish'}
+          disabled={isNavigating}
         >
           {language === 'ru' ? 'O\'zbekcha' : 'Русский'}
         </button>
@@ -301,6 +393,7 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
                     onClick={() => setShowNameInput(true)}
                     className="text-cyan-400 hover:text-cyan-300 transition-colors text-sm"
                     aria-label={language === 'ru' ? 'Как мне к тебе обращаться?' : 'Sizga qanday murojaat qilishim kerak?'}
+                    disabled={isNavigating}
                   >
                     {language === 'ru' 
                       ? 'Как мне к тебе обращаться?' 
@@ -324,11 +417,13 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
                     onKeyPress={(e) => e.key === 'Enter' && handleNameSubmit()}
                     autoFocus
                     aria-label={language === 'ru' ? 'Ваше имя' : 'Ismingiz'}
+                    disabled={isNavigating}
                   />
                   <button
                     onClick={handleNameSubmit}
                     className="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg transition-colors"
                     aria-label={language === 'ru' ? 'Сохранить' : 'Saqlash'}
+                    disabled={isNavigating}
                   >
                     {language === 'ru' ? 'Сохранить' : 'Saqlash'}
                   </button>
@@ -441,6 +536,7 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
                       onMouseEnter={() => playSound('hover')}
                       className="px-6 py-3 bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white rounded-lg transition-colors flex items-center justify-center space-x-2 border border-gray-700 hover:border-purple-500 group relative overflow-hidden"
                       aria-label={language === 'ru' ? 'Назад' : 'Orqaga'}
+                      disabled={isNavigating}
                     >
                       {/* Button hover effect */}
                       <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-blue-600 opacity-0 group-hover:opacity-10 transition-opacity"></div>
@@ -454,6 +550,7 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
                       onMouseEnter={() => playSound('hover')}
                       className="flex-1 px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-lg transition-colors flex items-center justify-center space-x-2 relative overflow-hidden group"
                       aria-label={language === 'ru' ? 'Начать пробуждение' : 'Uyg\'onishni boshlash'}
+                      disabled={isNavigating}
                     >
                       {/* Button glow effect */}
                       <div className="absolute -inset-1 bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg blur opacity-30 group-hover:opacity-50 transition-opacity"></div>
@@ -468,6 +565,21 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
                   </motion.div>
                 )}
               </AnimatePresence>
+              
+              {/* Loading indicator */}
+              {isNavigating && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="mt-6 flex justify-center"
+                >
+                  <div className="flex items-center space-x-3">
+                    <div className="w-4 h-4 bg-purple-600 rounded-full animate-pulse"></div>
+                    <div className="w-4 h-4 bg-blue-600 rounded-full animate-pulse" style={{ animationDelay: '0.3s' }}></div>
+                    <div className="w-4 h-4 bg-cyan-600 rounded-full animate-pulse" style={{ animationDelay: '0.6s' }}></div>
+                  </div>
+                </motion.div>
+              )}
               
               {/* Cyberpunk decorative elements with enhanced effects */}
               <div className="absolute -bottom-3 -right-3 w-24 h-24 border-r-2 border-b-2 border-cyan-500 opacity-50 animate-pulse"></div>

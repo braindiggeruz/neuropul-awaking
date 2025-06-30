@@ -106,3 +106,13 @@ export const cleanupAudio = (): void => {
     }
   }
 };
+
+// Check if audio is supported
+export const isAudioSupported = (): boolean => {
+  return !!getAudioContext();
+};
+
+// Check if vibration is supported
+export const isVibrationSupported = (): boolean => {
+  return !!navigator.vibrate;
+};

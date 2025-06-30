@@ -8,8 +8,10 @@ import { logError } from '../lib/utils/errorLogger';
 import ErrorBoundary from '../components/ErrorBoundary';
 import { getUserLanguage, setUserLanguage } from '../lib/utils/i18n';
 import LanguageSwitcher from '../components/LanguageSwitcher';
+import { cleanupAudio } from '../utils/audioUtils';
+import NotFoundPage from './NotFoundPage';
 
-type Screen = 'intro' | 'lost' | 'awakening' | 'ready' | 'portal';
+type Screen = 'intro' | 'lost' | 'awakening' | 'ready' | 'portal' | '404';
 
 const TraeAwakensPage: React.FC = () => {
   const [currentScreen, setCurrentScreen] = useState<Screen>('intro');
@@ -23,6 +25,7 @@ const TraeAwakensPage: React.FC = () => {
   // Refs to prevent stale closures in event handlers
   const isNavigatingRef = useRef(false);
   const currentScreenRef = useRef<Screen>('intro');
+  const timeoutRefs = useRef<NodeJS.Timeout[]>([]);
 
   // Update refs when state changes
   useEffect(() => {
@@ -109,6 +112,20 @@ const TraeAwakensPage: React.FC = () => {
     }
   }, []);
 
+  // Cleanup function for all timeouts and resources
+  useEffect(() => {
+    return () => {
+      // Clear all timeouts
+      timeoutRefs.current.forEach(timeout => clearTimeout(timeout));
+      timeoutRefs.current = [];
+      
+      // Clean up audio resources
+      cleanupAudio();
+      
+      console.log('TraeAwakensPage cleanup complete');
+    };
+  }, []);
+
   const handlePathSelect = (path: 'lost' | 'awakening' | 'ready') => {
     try {
       if (isNavigatingRef.current) {
@@ -140,10 +157,13 @@ const TraeAwakensPage: React.FC = () => {
       localStorage.setItem('neuropul_level_selected', 'true');
       
       // Reset navigation state after a delay
-      setTimeout(() => {
+      const timeout = setTimeout(() => {
         setIsNavigating(false);
         isNavigatingRef.current = false;
       }, 500);
+      
+      // Store timeout reference for cleanup
+      timeoutRefs.current.push(timeout);
     } catch (error) {
       console.error('Error in handlePathSelect:', error);
       logError(error, {
@@ -176,10 +196,13 @@ const TraeAwakensPage: React.FC = () => {
       setCurrentScreen('intro');
       
       // Reset navigation state after a delay
-      setTimeout(() => {
+      const timeout = setTimeout(() => {
         setIsNavigating(false);
         isNavigatingRef.current = false;
       }, 500);
+      
+      // Store timeout reference for cleanup
+      timeoutRefs.current.push(timeout);
     } catch (error) {
       console.error('Error in handleBack:', error);
       logError(error, {
@@ -225,7 +248,7 @@ const TraeAwakensPage: React.FC = () => {
       
       // In a real implementation, you would navigate to the awakening portal or dashboard
       // For now, we'll just redirect to the home page after a delay
-      setTimeout(() => {
+      const redirectTimeout = setTimeout(() => {
         try {
           // Check if we should show CTA
           if (localStorage.getItem('neuropul_show_cta') === 'true' && localStorage.getItem('neuropul_is_paid') !== 'true') {
@@ -250,6 +273,9 @@ const TraeAwakensPage: React.FC = () => {
           setNavigationError('Ошибка при переходе. Пожалуйста, обновите страницу.');
         }
       }, 2000);
+      
+      // Store timeout reference for cleanup
+      timeoutRefs.current.push(redirectTimeout);
     } catch (error) {
       console.error('Error in handleContinueToPortal:', error);
       logError(error, {
@@ -301,11 +327,29 @@ const TraeAwakensPage: React.FC = () => {
       }
     }, 60000); // Check every minute
     
+    // Store timeout reference for cleanup
+    timeoutRefs.current.push(inactivityTimeout);
+    
     // Update last activity timestamp
     localStorage.setItem('neuropul_last_activity', new Date().toISOString());
     
-    return () => clearTimeout(inactivityTimeout);
+    return () => {
+      clearTimeout(inactivityTimeout);
+    };
   }, [currentScreen]);
+
+  // Handle direct URL access to non-existent routes
+  useEffect(() => {
+    const path = window.location.pathname;
+    if (path !== '/' && path !== '/index.html' && currentScreen === 'intro') {
+      // Check if this is a valid route
+      const validRoutes = ['/', '/index.html', '/premium', '/awakening'];
+      if (!validRoutes.includes(path)) {
+        console.log(`Invalid route: ${path}, showing 404 page`);
+        setCurrentScreen('404');
+      }
+    }
+  }, []);
 
   return (
     <ErrorBoundary>
@@ -383,6 +427,18 @@ const TraeAwakensPage: React.FC = () => {
               </div>
             </motion.div>
           )}
+          
+          {currentScreen === '404' && (
+            <motion.div
+              key="404"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.5 }}
+            >
+              <NotFoundPage onGoHome={() => setCurrentScreen('intro')} />
+            </motion.div>
+          )}
         </AnimatePresence>
         
         {/* Navigation Error */}
@@ -396,6 +452,7 @@ const TraeAwakensPage: React.FC = () => {
               <button 
                 onClick={() => setNavigationError(null)}
                 className="text-white hover:text-red-200"
+                aria-label="Закрыть уведомление"
               >
                 ✕
               </button>

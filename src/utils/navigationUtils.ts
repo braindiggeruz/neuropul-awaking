@@ -168,3 +168,29 @@ export const emergencyReset = (): void => {
     window.location.reload();
   }
 };
+
+/**
+ * Debounce function to prevent multiple rapid calls
+ * @param func The function to debounce
+ * @param wait Wait time in milliseconds
+ * @returns Debounced function
+ */
+export function debounce<T extends (...args: any[]) => any>(
+  func: T,
+  wait = 300
+): (...args: Parameters<T>) => void {
+  let timeout: ReturnType<typeof setTimeout> | null = null;
+  
+  return function(this: any, ...args: Parameters<T>): void {
+    const context = this;
+    
+    if (timeout) {
+      clearTimeout(timeout);
+    }
+    
+    timeout = setTimeout(() => {
+      timeout = null;
+      func.apply(context, args);
+    }, wait);
+  };
+}

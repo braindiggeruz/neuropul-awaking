@@ -61,6 +61,18 @@ class ErrorBoundary extends Component<Props, State> {
     }
   }
 
+  handleReset = () => {
+    console.log('🧠 SYSTEM CLEAR INITIATED');
+    try {
+      localStorage.clear();
+      sessionStorage.clear();
+      window.location.href = '/';
+    } catch (error) {
+      console.error('Error during emergency reset:', error);
+      window.location.reload();
+    }
+  };
+
   render(): ReactNode {
     if (this.state.hasError) {
       // Get user language
@@ -76,17 +88,17 @@ class ErrorBoundary extends Component<Props, State> {
             </h2>
             <p className="text-gray-300 mb-6">
               {language === 'ru' 
-                ? 'Произошла ошибка в приложении. Пожалуйста, обновите страницу.' 
-                : 'Ilovada xatolik yuz berdi. Iltimos, sahifani yangilang.'}
+                ? 'Произошла ошибка в приложении. Пожалуйста, сбросьте данные и перезагрузите страницу.' 
+                : 'Ilovada xatolik yuz berdi. Iltimos, ma\'lumotlarni tiklang va sahifani yangilang.'}
             </p>
             <p className="text-red-400 text-sm mb-6 bg-red-900 bg-opacity-30 p-3 rounded-lg">
               {this.state.error?.message || (language === 'ru' ? 'Неизвестная ошибка' : 'Noma\'lum xato')}
             </p>
             <button
-              onClick={() => window.location.reload()}
-              className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg transition-colors"
+              onClick={this.handleReset}
+              className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg transition-colors"
             >
-              {language === 'ru' ? 'Обновить страницу' : 'Sahifani yangilash'}
+              {language === 'ru' ? 'Сбросить данные и перезагрузить' : 'Ma\'lumotlarni tiklash va qayta yuklash'}
             </button>
           </div>
         </div>

@@ -1,13 +1,13 @@
-import React, { useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import React, { useEffect, lazy, Suspense } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { setupGlobalErrorHandling } from './lib/utils/errorLogger';
 import FocusManager from './components/FocusManager';
 import ScrollToTop from './components/ScrollToTop';
 import TitleManager from './components/TitleManager';
 
 // Lazy load components
-const Home = React.lazy(() => import('./pages/index'));
-const NotFoundPage = React.lazy(() => import('./pages/NotFoundPage'));
+const Home = lazy(() => import('./pages/index'));
+const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 
 // Loading fallback
 const LoadingFallback = () => (
@@ -18,41 +18,6 @@ const LoadingFallback = () => (
     </div>
   </div>
 );
-
-// Portal Guard component
-const PortalGuard = () => {
-  const location = useLocation();
-  const navigate = useNavigate();
-  
-  useEffect(() => {
-    // Check if we're on the portal screen and it's been shown before
-    const currentScreen = localStorage.getItem('neuropul_current_screen');
-    const introCompleted = localStorage.getItem('neuropul_intro_completed');
-    const navigationInProgress = localStorage.getItem('neuropul_navigation_in_progress');
-    
-    console.log(`🔍 PortalGuard - currentScreen: ${currentScreen}, introCompleted: ${introCompleted}, pathname: ${location.pathname}, navigationInProgress: ${navigationInProgress}`);
-    
-    if (currentScreen === 'portal' || navigationInProgress === 'true') {
-      console.log('⚠️ PortalGuard - Detected portal screen or navigation in progress, clearing state');
-      
-      // Clear all navigation flags to prevent loops
-      localStorage.removeItem('neuropul_current_screen');
-      localStorage.removeItem('neuropul_navigation_in_progress');
-      
-      // If intro is completed, redirect to home
-      if (introCompleted === 'true') {
-        console.log('⚠️ PortalGuard - Intro completed, redirecting to home');
-        
-        // Use setTimeout to ensure this happens after current render cycle
-        setTimeout(() => {
-          navigate('/', { replace: true });
-        }, 100);
-      }
-    }
-  }, [location.pathname, navigate]);
-  
-  return null;
-};
 
 // Set up global error handling
 setupGlobalErrorHandling();
@@ -72,54 +37,44 @@ function App() {
       sessionStorage.setItem('redirectAfterAuth', redirectPath);
     }
     
-    // Remove initial loader if it's still there
+    // CRITICAL: Remove initial loader
     const initialLoader = document.getElementById('initial-loader');
     if (initialLoader) {
-      console.log('🧹 Removing initial loader from App component');
+      console.log('🚀 Removing initial loader');
       initialLoader.style.opacity = '0';
       initialLoader.style.transition = 'opacity 0.5s ease';
       setTimeout(() => {
-        if (initialLoader && initialLoader.parentNode) {
+        if (initialLoader.parentNode) {
           initialLoader.parentNode.removeChild(initialLoader);
-          console.log('🧹 Initial loader removed from App component');
+          console.log('✅ Initial loader removed from DOM');
         }
       }, 500);
     }
     
-    // CRITICAL FIX: Check for portal screen and clear it if needed
-    const currentScreen = localStorage.getItem('neuropul_current_screen');
-    if (currentScreen === 'portal') {
-      console.log('⚠️ App detected portal screen on mount, clearing to prevent loops');
+    // CRITICAL: Clear any portal state to prevent navigation loops
+    const isPortalScreen = localStorage.getItem('neuropul_current_screen') === 'portal';
+    if (isPortalScreen) {
+      console.log('🔄 Detected portal screen in storage, clearing to prevent loops');
       localStorage.removeItem('neuropul_current_screen');
+      sessionStorage.removeItem('neuropul_current_screen');
     }
     
-    // CRITICAL FIX: Check for navigation in progress and clear it if needed
-    const navigationInProgress = localStorage.getItem('neuropul_navigation_in_progress');
-    if (navigationInProgress === 'true') {
-      console.log('⚠️ App detected navigation in progress on mount, clearing to prevent loops');
-      localStorage.removeItem('neuropul_navigation_in_progress');
-    }
-    
-    // CRITICAL FIX: Remove all loaders that might be present
-    document.querySelectorAll('.initial-loader, .fallback-loader').forEach(el => {
-      console.log('🧹 Removing loader element:', el);
-      el.remove();
-    });
+    // Log current path for debugging
+    console.log('📍 Current path:', window.location.pathname);
   }, []);
 
   return (
     <FocusManager>
-      <Router>
+      <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <ScrollToTop />
-        <PortalGuard />
         <TitleManager>
-          <React.Suspense fallback={<LoadingFallback />}>
+          <Suspense fallback={<LoadingFallback />}>
             <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/index.html" element={<Navigate to="/" replace />} />
               <Route path="*" element={<NotFoundPage onGoHome={() => window.location.href = '/'} />} />
             </Routes>
-          </React.Suspense>
+          </Suspense>
         </TitleManager>
       </Router>
     </FocusManager>

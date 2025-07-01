@@ -8,6 +8,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { saveUserProgress, loadUserProgress, updateUserProgress } from '../utils/progressUtils';
 import { logError } from '../lib/utils/errorLogger';
 import { cleanupAudio } from '../utils/audioUtils';
+import EmergencyResetButton from '../components/EmergencyResetButton';
 
 type Screen = 'intro' | 'lost' | 'awakening' | 'ready' | 'portal';
 
@@ -25,6 +26,7 @@ const TraeAwakensPage: React.FC = () => {
   const isMountedRef = useRef<boolean>(true);
   const navigationAttemptRef = useRef<number>(0);
   const hasNavigatedRef = useRef<boolean>(false);
+  const portalTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Initialize session and tracking
   useEffect(() => {
@@ -34,6 +36,7 @@ const TraeAwakensPage: React.FC = () => {
       // CRITICAL: Clear any portal-related storage to prevent loops
       localStorage.removeItem('neuropul_current_screen');
       sessionStorage.removeItem('neuropul_current_screen');
+      localStorage.removeItem('neuropul_navigation_in_progress');
       
       // Check if there's a saved path and screen
       const savedPath = localStorage.getItem('neuropul_user_path');
@@ -100,14 +103,14 @@ const TraeAwakensPage: React.FC = () => {
       // Add emergency escape hatch for portal screen
       if (currentScreen === 'portal') {
         console.log('[TraeAwakensPage] Portal screen detected, adding emergency escape timeout');
-        const escapeTimeout = setTimeout(() => {
+        portalTimeoutRef.current = setTimeout(() => {
           if (currentScreen === 'portal' && isMountedRef.current) {
             console.log('[TraeAwakensPage] Emergency escape triggered - forcing navigation');
             forceNavigateToHome();
           }
         }, 10000); // 10 second escape hatch
         
-        timeoutRefs.current.push(escapeTimeout);
+        timeoutRefs.current.push(portalTimeoutRef.current);
       }
     } catch (error) {
       if (import.meta.env.MODE !== 'production') {
@@ -129,6 +132,11 @@ const TraeAwakensPage: React.FC = () => {
         inactivityTimerRef.current = null;
       }
       
+      if (portalTimeoutRef.current) {
+        clearTimeout(portalTimeoutRef.current);
+        portalTimeoutRef.current = null;
+      }
+      
       // Clear all timeouts
       timeoutRefs.current.forEach(timeout => clearTimeout(timeout));
       timeoutRefs.current = [];
@@ -148,6 +156,7 @@ const TraeAwakensPage: React.FC = () => {
       localStorage.removeItem('neuropul_current_screen');
       sessionStorage.removeItem('neuropul_current_screen');
       localStorage.removeItem('neuropul_portal_state');
+      localStorage.removeItem('neuropul_navigation_in_progress');
       
       // If we've tried navigate too many times, use direct location change
       if (navigationAttemptRef.current > 2 && !hasNavigatedRef.current) {
@@ -274,6 +283,7 @@ const TraeAwakensPage: React.FC = () => {
     }
     
     isNavigatingRef.current = true;
+    localStorage.setItem('neuropul_navigation_in_progress', 'true');
     
     try {
       console.log('[TraeAwakensPage] Continue to portal triggered');
@@ -301,14 +311,20 @@ const TraeAwakensPage: React.FC = () => {
       }
       
       // CRITICAL: Set a timeout to force navigation if portal screen gets stuck
-      const portalTimeout = setTimeout(() => {
+      if (portalTimeoutRef.current) {
+        clearTimeout(portalTimeoutRef.current);
+      }
+      
+      portalTimeoutRef.current = setTimeout(() => {
         if (isMountedRef.current && currentScreen === 'portal') {
           console.log('[TraeAwakensPage] Portal timeout reached, forcing navigation');
           forceNavigateToHome();
         }
       }, 5000); // 5 second timeout
       
-      timeoutRefs.current.push(portalTimeout);
+      if (portalTimeoutRef.current) {
+        timeoutRefs.current.push(portalTimeoutRef.current);
+      }
       
       // Navigate to home after a short delay
       const redirectTimeout = setTimeout(() => {
@@ -330,6 +346,7 @@ const TraeAwakensPage: React.FC = () => {
       
       // Reset navigation lock
       isNavigatingRef.current = false;
+      localStorage.removeItem('neuropul_navigation_in_progress');
       
       // Fallback navigation
       if (isMountedRef.current) {
@@ -388,15 +405,29 @@ const TraeAwakensPage: React.FC = () => {
   useEffect(() => {
     if (currentScreen === 'portal') {
       console.log('[TraeAwakensPage] Portal screen detected, adding emergency escape timeout');
-      const escapeTimeout = setTimeout(() => {
+      
+      if (portalTimeoutRef.current) {
+        clearTimeout(portalTimeoutRef.current);
+      }
+      
+      portalTimeoutRef.current = setTimeout(() => {
         if (currentScreen === 'portal' && isMountedRef.current) {
-          console.log('[TraeAwakensPage] Emergency escape triggered - forcing navigation');
+          console.log('[TraeAwakensPage] Force navigation triggered - still on portal screen');
           forceNavigateToHome();
         }
       }, 8000); // 8 second escape hatch
       
-      timeoutRefs.current.push(escapeTimeout);
+      if (portalTimeoutRef.current) {
+        timeoutRefs.current.push(portalTimeoutRef.current);
+      }
     }
+    
+    return () => {
+      if (portalTimeoutRef.current) {
+        clearTimeout(portalTimeoutRef.current);
+        portalTimeoutRef.current = null;
+      }
+    };
   }, [currentScreen]);
 
   // Manual escape button handler
@@ -481,6 +512,9 @@ const TraeAwakensPage: React.FC = () => {
           </motion.div>
         )}
       </AnimatePresence>
+      
+      {/* Emergency reset button */}
+      <EmergencyResetButton />
     </div>
   );
 };

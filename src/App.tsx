@@ -4,6 +4,7 @@ import { setupGlobalErrorHandling } from './lib/utils/errorLogger';
 import FocusManager from './components/FocusManager';
 import ScrollToTop from './components/ScrollToTop';
 import TitleManager from './components/TitleManager';
+import ErrorBoundary from './components/ErrorBoundary';
 
 // Lazy load components
 const Home = lazy(() => import('./pages/index'));
@@ -57,6 +58,7 @@ function App() {
       console.log('🔄 Detected portal screen in storage, clearing to prevent loops');
       localStorage.removeItem('neuropul_current_screen');
       sessionStorage.removeItem('neuropul_current_screen');
+      localStorage.removeItem('neuropul_navigation_in_progress');
     }
     
     // Log current path for debugging
@@ -64,20 +66,22 @@ function App() {
   }, []);
 
   return (
-    <FocusManager>
-      <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-        <ScrollToTop />
-        <TitleManager>
-          <Suspense fallback={<LoadingFallback />}>
-            <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/index.html" element={<Navigate to="/" replace />} />
-              <Route path="*" element={<NotFoundPage onGoHome={() => window.location.href = '/'} />} />
-            </Routes>
-          </Suspense>
-        </TitleManager>
-      </Router>
-    </FocusManager>
+    <ErrorBoundary>
+      <FocusManager>
+        <Router>
+          <ScrollToTop />
+          <TitleManager>
+            <Suspense fallback={<LoadingFallback />}>
+              <Routes>
+                <Route path="/" element={<Home />} />
+                <Route path="/index.html" element={<Navigate to="/" replace />} />
+                <Route path="*" element={<NotFoundPage onGoHome={() => window.location.href = '/'} />} />
+              </Routes>
+            </Suspense>
+          </TitleManager>
+        </Router>
+      </FocusManager>
+    </ErrorBoundary>
   );
 }
 

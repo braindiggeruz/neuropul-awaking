@@ -30,6 +30,7 @@ const renderApp = () => {
     // Clear any portal state to prevent navigation issues
     localStorage.removeItem('neuropul_current_screen');
     sessionStorage.removeItem('neuropul_current_screen');
+    localStorage.removeItem('neuropul_navigation_in_progress');
     
     const root = createRoot(rootElement);
     

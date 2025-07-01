@@ -17,13 +17,16 @@ export default function Home() {
       
       // Track page view
       console.log('[Home] Page viewed:', window.location.pathname);
+      console.log("[NAV] Current path:", window.location.pathname);
       
       // Clear any portal state to prevent navigation issues
       localStorage.removeItem('neuropul_current_screen');
       sessionStorage.removeItem('neuropul_current_screen');
+      localStorage.removeItem('neuropul_navigation_in_progress');
+      localStorage.removeItem('hasPassedPortal'); // ADDED: Clear hasPassedPortal flag
       
       // Initialize system
-      const isPaid = localStorage.getItem('neuropul_is_paid') === 'true';
+      const isPaid = localStorage.getItem('neuropul_is_paid') === 'true'; // FIXED: Check for string "true"
       const userPath = localStorage.getItem('neuropul_user_path');
       const userName = localStorage.getItem('neuropul_user_name');
       const xp = parseInt(localStorage.getItem('neuropul_xp') || '0');

@@ -176,6 +176,9 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
       // Save current screen
       localStorage.setItem('neuropul_current_screen', 'portal');
       
+      // FIXED: Use string "true" instead of boolean true
+      localStorage.setItem('hasPassedPortal', 'true');
+      
       // Track progress
       const visitCount = parseInt(localStorage.getItem('neuropul_visit_count') || '0');
       localStorage.setItem('neuropul_visit_count', (visitCount + 1).toString());

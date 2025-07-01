@@ -59,10 +59,11 @@ function App() {
       localStorage.removeItem('neuropul_current_screen');
       sessionStorage.removeItem('neuropul_current_screen');
       localStorage.removeItem('neuropul_navigation_in_progress');
+      localStorage.removeItem('hasPassedPortal'); // ADDED: Clear hasPassedPortal flag
     }
     
     // Log current path for debugging
-    console.log('📍 Current path:', window.location.pathname);
+    console.log('[NAV] Current path:', window.location.pathname);
   }, []);
 
   return (

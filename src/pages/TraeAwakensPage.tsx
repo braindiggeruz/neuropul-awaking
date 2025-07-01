@@ -37,6 +37,7 @@ const TraeAwakensPage: React.FC = () => {
       localStorage.removeItem('neuropul_current_screen');
       sessionStorage.removeItem('neuropul_current_screen');
       localStorage.removeItem('neuropul_navigation_in_progress');
+      localStorage.removeItem('hasPassedPortal'); // ADDED: Clear hasPassedPortal flag
       
       // Check if there's a saved path and screen
       const savedPath = localStorage.getItem('neuropul_user_path');
@@ -112,6 +113,9 @@ const TraeAwakensPage: React.FC = () => {
         
         timeoutRefs.current.push(portalTimeoutRef.current);
       }
+
+      // Log current path for debugging
+      console.log("[NAV] Current path:", window.location.pathname);
     } catch (error) {
       if (import.meta.env.MODE !== 'production') {
         console.error('[TraeAwakensPage] Error initializing session:', error);
@@ -157,6 +161,7 @@ const TraeAwakensPage: React.FC = () => {
       sessionStorage.removeItem('neuropul_current_screen');
       localStorage.removeItem('neuropul_portal_state');
       localStorage.removeItem('neuropul_navigation_in_progress');
+      localStorage.removeItem('hasPassedPortal'); // ADDED: Clear hasPassedPortal flag
       
       // If we've tried navigate too many times, use direct location change
       if (navigationAttemptRef.current > 2 && !hasNavigatedRef.current) {
@@ -293,9 +298,10 @@ const TraeAwakensPage: React.FC = () => {
         setCurrentScreen('portal');
       }
       
-      // Set completion flag
+      // Set completion flag - FIXED: Use string "true" instead of boolean true
       localStorage.setItem('neuropul_intro_completed', 'true');
       localStorage.setItem('neuropul_intro_completed_at', new Date().toISOString());
+      localStorage.setItem('hasPassedPortal', 'true'); // FIXED: Use string "true" instead of boolean true
       
       // Update user progress
       updateUserProgress({

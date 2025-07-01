@@ -189,6 +189,9 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
       // Save current screen
       localStorage.setItem('neuropul_current_screen', path);
       
+      // FIXED: Use string "true" instead of boolean true
+      localStorage.setItem('hasPassedPortal', 'true');
+      
       // Track progress
       const visitCount = parseInt(localStorage.getItem('neuropul_visit_count') || '0');
       localStorage.setItem('neuropul_visit_count', (visitCount + 1).toString());
@@ -265,6 +268,9 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
         localStorage.setItem('neuropul_user_input', userInput);
         localStorage.setItem('neuropul_user_path', detectedPath);
         localStorage.setItem('neuropul_current_screen', detectedPath);
+        
+        // FIXED: Use string "true" instead of boolean true
+        localStorage.setItem('hasPassedPortal', 'true');
         
         // Initialize or update user progress
         const existingProgress = loadUserProgress();

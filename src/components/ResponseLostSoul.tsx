@@ -141,6 +141,9 @@ const ResponseLostSoul: React.FC<ResponseLostSoulProps> = ({ onContinue, onBack 
       localStorage.setItem('neuropul_user_experience', 'beginner');
       localStorage.setItem('neuropul_user_path', 'lost');
       
+      // FIXED: Use string "true" instead of boolean true
+      localStorage.setItem('hasPassedPortal', 'true');
+      
       // Track progress
       const visitCount = parseInt(localStorage.getItem('neuropul_visit_count') || '0');
       localStorage.setItem('neuropul_visit_count', (visitCount + 1).toString());

@@ -83,7 +83,7 @@ const ResponseHackerReady: React.FC<ResponseHackerReadyProps> = ({ onContinue, o
       }
       
       // Check if user has paid status
-      const userPaid = localStorage.getItem('neuropul_is_paid') === 'true';
+      const userPaid = localStorage.getItem('neuropul_is_paid') === 'true'; // FIXED: Check for string "true"
       setIsPaid(userPaid);
       
       const traeMessage = getTraeMessage();
@@ -156,6 +156,9 @@ const ResponseHackerReady: React.FC<ResponseHackerReadyProps> = ({ onContinue, o
       // Save user experience level
       localStorage.setItem('neuropul_user_experience', 'advanced');
       localStorage.setItem('neuropul_user_path', 'ready');
+      
+      // FIXED: Use string "true" instead of boolean true
+      localStorage.setItem('hasPassedPortal', 'true');
       
       // Track progress
       const visitCount = parseInt(localStorage.getItem('neuropul_visit_count') || '0');

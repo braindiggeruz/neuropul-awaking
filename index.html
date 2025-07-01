@@ -131,6 +131,7 @@
       // CRITICAL FIX: Clear portal screen and navigation flags on page load
       localStorage.removeItem('neuropul_current_screen');
       localStorage.removeItem('neuropul_navigation_in_progress');
+      localStorage.removeItem('hasPassedPortal');
       console.log('🧹 Cleared navigation state from HTML script');
       
       // Remove the initial loader once the app has loaded
@@ -173,6 +174,7 @@
           console.log('🚨 EMERGENCY ESCAPE: Still on portal after 10 seconds');
           localStorage.removeItem('neuropul_current_screen');
           localStorage.removeItem('neuropul_navigation_in_progress');
+          localStorage.removeItem('hasPassedPortal');
           window.location.href = '/';
         }
       }, 10000);

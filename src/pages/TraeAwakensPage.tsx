@@ -42,7 +42,6 @@ const TraeAwakensPage: React.FC = () => {
       localStorage.removeItem('neuropul_current_screen');
       sessionStorage.removeItem('neuropul_current_screen');
       localStorage.removeItem('neuropul_navigation_in_progress');
-      localStorage.removeItem('hasPassedPortal');
       
       // Check if there's a saved path and screen
       const savedPath = localStorage.getItem('neuropul_user_path');

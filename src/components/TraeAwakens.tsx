@@ -6,6 +6,7 @@ import { getUserLanguage, setUserLanguage, translate } from '../lib/utils/i18n';
 import LanguageSwitcher from './LanguageSwitcher';
 import { playSound, vibrate, cleanupAudio } from '../utils/audioUtils';
 import { saveUserProgress, loadUserProgress, updateUserProgress } from '../utils/progressUtils';
+import { navigateSafely } from '../utils/navigationUtils';
 
 interface TraeAwakensProps {
   onPathSelect: (path: 'lost' | 'awakening' | 'ready') => void;
@@ -18,10 +19,10 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
   const [showOptions, setShowOptions] = useState(false);
   const [userPath, setUserPath] = useState<string | null>(null);
   const [language, setLanguage] = useState<'ru' | 'uz'>(getUserLanguage());
-  const [isNavigating, setIsNavigating] = useState(false);
   
-  // Refs to prevent stale closures in event handlers
-  const isNavigatingRef = useRef(false);
+  // Refs for preventing multiple executions
+  const printedOnceRef = useRef(false);
+  const hasRenderedRef = useRef(false);
   const languageRef = useRef(language);
   const timeoutRefs = useRef<NodeJS.Timeout[]>([]);
   const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -29,9 +30,8 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
 
   // Update refs when state changes
   useEffect(() => {
-    isNavigatingRef.current = isNavigating;
     languageRef.current = language;
-  }, [isNavigating, language]);
+  }, [language]);
 
   // Load language preference
   useEffect(() => {
@@ -65,6 +65,10 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
 
   // Simulate typing effect
   useEffect(() => {
+    // Guard against multiple executions
+    if (printedOnceRef.current) return;
+    printedOnceRef.current = true;
+    
     let typingInterval: NodeJS.Timeout;
     
     try {
@@ -172,12 +176,7 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
 
   const handlePathSelect = (path: 'lost' | 'awakening' | 'ready') => {
     try {
-      if (isNavigatingRef.current) {
-        return;
-      }
-      
-      setIsNavigating(true);
-      isNavigatingRef.current = true;
+      console.log(`[TraeAwakens] Path selected: ${path}`);
       
       playSound('click', true);
       vibrate([50, 30, 50], true);
@@ -209,24 +208,8 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
         userPath: path
       });
       
-      // Call onPathSelect with a small delay to ensure state is saved
-      const navigationTimeout = setTimeout(() => {
-        if (isMountedRef.current) {
-          onPathSelect(path);
-          
-          // Reset navigation state after a delay in case the navigation fails
-          const resetTimeout = setTimeout(() => {
-            if (isMountedRef.current) {
-              setIsNavigating(false);
-              isNavigatingRef.current = false;
-            }
-          }, 1000);
-          
-          timeoutRefs.current.push(resetTimeout);
-        }
-      }, 300); // Increased delay to ensure state is saved before navigation
-      
-      timeoutRefs.current.push(navigationTimeout);
+      // Call onPathSelect
+      onPathSelect(path);
     } catch (error) {
       if (import.meta.env.MODE !== 'production') {
         console.error('Error in handlePathSelect:', error);
@@ -235,10 +218,6 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
         component: 'TraeAwakens',
         action: 'handlePathSelect'
       });
-      
-      // Reset navigation state
-      setIsNavigating(false);
-      isNavigatingRef.current = false;
     }
   };
 
@@ -247,10 +226,7 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
   const [showInput, setShowInput] = useState(false);
 
   const handleCustomInput = () => {
-    if (userInput.trim() && !isNavigatingRef.current) {
-      setIsNavigating(true);
-      isNavigatingRef.current = true;
-      
+    if (userInput.trim()) {
       try {
         // Process user input to determine path
         const input = userInput.toLowerCase();
@@ -301,24 +277,8 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
         playSound('click', true);
         vibrate([50, 30, 50], true);
         
-        // Call onPathSelect with a small delay
-        const navigationTimeout = setTimeout(() => {
-          if (isMountedRef.current) {
-            onPathSelect(detectedPath);
-            
-            // Reset navigation state after a delay in case the navigation fails
-            const resetTimeout = setTimeout(() => {
-              if (isMountedRef.current) {
-                setIsNavigating(false);
-                isNavigatingRef.current = false;
-              }
-            }, 1000);
-            
-            timeoutRefs.current.push(resetTimeout);
-          }
-        }, 300); // Increased delay to ensure state is saved before navigation
-        
-        timeoutRefs.current.push(navigationTimeout);
+        // Call onPathSelect
+        onPathSelect(detectedPath);
       } catch (error) {
         if (import.meta.env.MODE !== 'production') {
           console.error('Error in handleCustomInput:', error);
@@ -328,10 +288,6 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
           action: 'handleCustomInput',
           additionalData: { userInput }
         });
-        
-        // Reset navigation state
-        setIsNavigating(false);
-        isNavigatingRef.current = false;
       }
     }
   };
@@ -345,6 +301,9 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
       setIsTyping(true);
       setMessage('');
       setShowOptions(false);
+      
+      // Reset printed flag to allow retyping
+      printedOnceRef.current = false;
       
       // Restart typing effect with new language
       const traeMessage = getTraeMessage();
@@ -468,7 +427,7 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
               
               {/* Options */}
               <AnimatePresence>
-                {showOptions && (
+                {showOptions && !hasRenderedRef.current && (
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -483,7 +442,6 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
                       onMouseEnter={() => playSound('hover', true)}
                       className="w-full p-4 bg-gray-800 hover:bg-gray-700 border border-gray-700 hover:border-purple-500 rounded-xl transition-all duration-300 flex items-center space-x-3 group relative overflow-hidden focus-ring"
                       aria-label={language === 'ru' ? 'Я потерян' : 'Men yo\'qolganman'}
-                      disabled={isNavigating}
                       id="lost-soul-button"
                       name="lost-soul-button"
                       data-testid="lost-soul-button"
@@ -514,7 +472,6 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
                       onMouseEnter={() => playSound('hover', true)}
                       className="w-full p-4 bg-gradient-to-r from-purple-900 to-blue-900 hover:from-purple-800 hover:to-blue-800 border border-purple-700 hover:border-purple-500 rounded-xl transition-all duration-300 flex items-center space-x-3 group relative overflow-hidden focus-ring"
                       aria-label={language === 'ru' ? 'Хочу пробудиться' : 'Uyg\'onishni xohlayman'}
-                      disabled={isNavigating}
                       id="awakening-button"
                       name="awakening-button"
                       data-testid="awakening-button"
@@ -546,7 +503,6 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
                       onMouseEnter={() => playSound('hover', true)}
                       className="w-full p-4 bg-gray-800 hover:bg-gray-700 border border-gray-700 hover:border-purple-500 rounded-xl transition-all duration-300 flex items-center space-x-3 group relative overflow-hidden focus-ring"
                       aria-label={language === 'ru' ? 'Я уже в теме' : 'Men allaqachon bilaman'}
-                      disabled={isNavigating}
                       id="ready-button"
                       name="ready-button"
                       data-testid="ready-button"
@@ -582,7 +538,6 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
                           onMouseEnter={() => playSound('hover', true)}
                           className="text-purple-400 hover:text-purple-300 text-sm transition-colors flex items-center mx-auto focus-ring"
                           aria-label={language === 'ru' ? 'Описать свой опыт своими словами' : 'Tajribangizni o\'z so\'zlaringiz bilan tasvirlang'}
-                          disabled={isNavigating}
                           id="custom-input-button"
                           name="custom-input-button"
                         >
@@ -604,7 +559,6 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
                             className="flex-1 bg-gray-800 border border-gray-700 focus:border-purple-500 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none"
                             onKeyPress={(e) => e.key === 'Enter' && handleCustomInput()}
                             aria-label={language === 'ru' ? 'Ваш опыт с AI' : 'AI bilan tajribangiz'}
-                            disabled={isNavigating}
                             id="custom-input"
                             name="custom-input"
                           />
@@ -613,7 +567,6 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
                             onMouseEnter={() => playSound('hover', true)}
                             className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors focus-ring"
                             aria-label={language === 'ru' ? 'Отправить' : 'Yuborish'}
-                            disabled={isNavigating}
                             id="submit-custom-input"
                             name="submit-custom-input"
                           >
@@ -622,24 +575,10 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
                         </div>
                       )}
                     </motion.div>
+                    {hasRenderedRef.current = true}
                   </motion.div>
                 )}
               </AnimatePresence>
-              
-              {/* Loading indicator */}
-              {isNavigating && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="mt-6 flex justify-center"
-                >
-                  <div className="flex items-center space-x-3">
-                    <div className="w-4 h-4 bg-purple-600 rounded-full animate-pulse"></div>
-                    <div className="w-4 h-4 bg-blue-600 rounded-full animate-pulse" style={{ animationDelay: '0.3s' }}></div>
-                    <div className="w-4 h-4 bg-cyan-600 rounded-full animate-pulse" style={{ animationDelay: '0.6s' }}></div>
-                  </div>
-                </motion.div>
-              )}
               
               {/* Cyberpunk decorative elements with enhanced effects */}
               <div className="absolute -bottom-3 -right-3 w-24 h-24 border-r-2 border-b-2 border-cyan-500 opacity-50 animate-pulse"></div>

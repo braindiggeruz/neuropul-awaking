@@ -11,7 +11,8 @@ export interface MemeImageResponse {
 }
 
 // Проверка доступности API ключа
-const API_KEY = "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";
+// FIXED: Removed hardcoded API key and use environment variable instead
+const API_KEY = import.meta.env.VITE_OPENAI_API_KEY;
 
 export async function askOpenAI(prompt: string): Promise<OpenAIResponse> {
   try {
@@ -35,26 +36,15 @@ export async function askOpenAI(prompt: string): Promise<OpenAIResponse> {
       };
     }
 
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    // FIXED: Use local API endpoint instead of direct OpenAI call
+    const response = await fetch("/api/gpt", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${API_KEY}`,
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "gpt-4o",
-        messages: [
-          {
-            role: "system",
-            content: "Ты - AI-наставник NeuropulAI. Отвечай кратко, полезно и вдохновляюще. Используй эмодзи. Максимум 500 слов. Будь практичным и конкретным. Обучай пользователя лучшим практикам работы с ИИ."
-          },
-          {
-            role: "user",
-            content: prompt
-          }
-        ],
-        temperature: 0.7,
-        max_tokens: 800
+        prompt: prompt,
+        systemPrompt: "Ты - AI-наставник NeuropulAI. Отвечай кратко, полезно и вдохновляюще. Используй эмодзи. Максимум 500 слов. Будь практичным и конкретным. Обучай пользователя лучшим практикам работы с ИИ."
       })
     });
 
@@ -91,20 +81,10 @@ export async function askOpenAI(prompt: string): Promise<OpenAIResponse> {
       }
     }
 
-    const data = await response.json();
+    const content = await response.json();
     console.log('[OpenAI] Response data received');
     
-    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
-      return {
-        success: false,
-        content: '',
-        error: 'Некорректный ответ от OpenAI API'
-      };
-    }
-
-    const content = data.choices[0].message.content;
-    
-    if (!content || content.trim().length === 0) {
+    if (!content || (typeof content === 'string' && content.trim().length === 0)) {
       return {
         success: false,
         content: '',
@@ -112,10 +92,10 @@ export async function askOpenAI(prompt: string): Promise<OpenAIResponse> {
       };
     }
 
-    console.log('[OpenAI] Success! Content length:', content.length);
+    console.log('[OpenAI] Success! Content length:', typeof content === 'string' ? content.length : 'object');
     return {
       success: true,
-      content: content.trim(),
+      content: typeof content === 'string' ? content.trim() : content,
       error: undefined
     };
 
@@ -158,77 +138,25 @@ export async function generateMemeImage(prompt: string): Promise<MemeImageRespon
       };
     }
 
-    // Улучшенный промт для DALL·E с обучающими элементами
-    const enhancedPrompt = `Create a high-quality, professional meme image about "${prompt}". 
-    Style: modern, vibrant colors, clear composition, suitable for social media sharing.
-    Requirements: family-friendly, universally funny, clear visual hierarchy, good contrast for text overlay.
-    Art style: digital illustration, clean lines, expressive characters or situations.
-    Quality: HD, professional meme format, trending style.
-    Make it visually engaging and memorable.`;
-
-    const response = await fetch("https://api.openai.com/v1/images/generations", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${API_KEY}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        model: "dall-e-3",
-        prompt: enhancedPrompt,
-        n: 1,
-        size: "1024x1024",
-        quality: "hd",
-        style: "vivid"
-      })
-    });
-
-    console.log('[DALL-E] Response status:', response.status);
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      console.error('[DALL-E] API Error:', errorData);
-      
-      if (response.status === 401) {
-        return {
-          success: false,
-          error: 'Неверный API ключ для генерации изображений'
-        };
-      } else if (response.status === 429) {
-        return {
-          success: false,
-          error: 'Превышен лимит на изображения. Попробуй через минуту ⏰'
-        };
-      } else if (response.status === 400) {
-        return {
-          success: false,
-          error: 'Некорректная тема для мема. Попробуй другую тему или улучши описание 🎨'
-        };
-      } else {
-        return {
-          success: false,
-          error: `Ошибка генерации: ${response.status}`
-        };
-      }
-    }
-
-    const data = await response.json();
-    console.log('[DALL-E] Enhanced image generation completed');
+    // FIXED: Use memegen.link instead of DALL-E to avoid API calls
+    // This is a simple, free API that doesn't require authentication
+    const words = prompt.trim().split(' ');
+    const midPoint = Math.ceil(words.length / 2);
+    const topText = words.slice(0, midPoint).join(' ');
+    const bottomText = words.slice(midPoint).join(' ') || 'AI мощь!';
     
-    if (!data.data || !data.data[0] || !data.data[0].url) {
-      return {
-        success: false,
-        error: 'Не удалось получить изображение от DALL-E'
-      };
-    }
+    const encodedTop = encodeURIComponent(topText);
+    const encodedBottom = encodeURIComponent(bottomText);
+    const imageUrl = `https://api.memegen.link/images/success/${encodedTop}/${encodedBottom}.webp`;
 
-    console.log('[DALL-E] Success! Enhanced image URL received');
+    console.log('[MEME] Generated URL:', imageUrl);
+    
     return {
       success: true,
-      imageUrl: data.data[0].url
+      imageUrl: imageUrl
     };
-
   } catch (error) {
-    console.error('[DALL-E] Request failed:', error);
+    console.error('[MEME] Request failed:', error);
     
     if (error instanceof TypeError && error.message.includes('fetch')) {
       return {

@@ -46,10 +46,7 @@ export const generatePDF = async (data: PDFData): Promise<PictifyResponse> => {
     
     console.log('📤 [DEBUG] Sending PDF generation request');
     
-    // Set timeout for fetch
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 20000); // 20 second timeout
-    
+    // FIXED: Use local API endpoint instead of direct service call
     const response = await fetch('/api/pictify', {
       method: 'POST',
       headers: {
@@ -62,11 +59,8 @@ export const generatePDF = async (data: PDFData): Promise<PictifyResponse> => {
           orientation: 'landscape',
           quality: 'high'
         }
-      }),
-      signal: controller.signal
+      })
     });
-    
-    clearTimeout(timeoutId);
 
     console.log('📥 [DEBUG] PDF API response status:', response.status);
 
@@ -90,7 +84,7 @@ export const generatePDF = async (data: PDFData): Promise<PictifyResponse> => {
       console.warn('⚠️ [DEBUG] PDF URL does not appear to be a PDF:', result.url.substring(0, 50));
     }
     
-    console.log('✨ [DEBUG] PDF generated successfully:', result);
+    console.log('✨ [DEBUG] PDF generated successfully');
     
     return {
       success: true,

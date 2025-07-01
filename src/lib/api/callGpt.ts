@@ -51,6 +51,7 @@ export const callGPT = async (prompt: string, systemPrompt: string = TRAE_SYSTEM
     const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
     
     try {
+      // Use local API endpoint instead of direct OpenAI call
       const response = await fetch('/api/gpt', {
         method: 'POST',
         headers: {
@@ -58,13 +59,7 @@ export const callGPT = async (prompt: string, systemPrompt: string = TRAE_SYSTEM
         },
         body: JSON.stringify({
           prompt: prompt.trim(),
-          systemPrompt: systemPrompt,
-          model: GPT_MODEL,
-          temperature: TEMPERATURE,
-          top_p: TOP_P,
-          frequency_penalty: FREQUENCY_PENALTY,
-          presence_penalty: PRESENCE_PENALTY,
-          max_tokens: MAX_TOKENS
+          systemPrompt: systemPrompt
         }),
         signal: controller.signal
       });
@@ -79,7 +74,7 @@ export const callGPT = async (prompt: string, systemPrompt: string = TRAE_SYSTEM
       }
 
       const result = await response.json();
-      console.log('📥 [DEBUG] GPT raw response:', result);
+      console.log('📥 [DEBUG] GPT raw response received');
       
       // Validate response
       if (!result || (typeof result === 'string' && result.trim().length === 0)) {
@@ -118,109 +113,273 @@ export const callGPT = async (prompt: string, systemPrompt: string = TRAE_SYSTEM
   }
 };
 
-// Process user input to determine path
-export const processUserInput = async (input: string): Promise<'lost' | 'awakening' | 'ready'> => {
+// Get archetype analysis from GPT
+export const getArchetypeAnalysis = async (answers: any[]): Promise<GPTResponse> => {
   try {
-    const prompt = `Пользователь ответил на вопрос "Кто ты?" следующим образом: "${input}"
+    if (!answers || answers.length === 0) {
+      return {
+        success: false,
+        error: 'No answers provided'
+      };
+    }
     
-    Определи, к какой категории относится пользователь:
-    1. "lost" - новичок, не знает про AI
-    2. "awakening" - знает немного, хочет начать
-    3. "ready" - опытный пользователь AI
+    const answersText = Array.isArray(answers) 
+      ? answers.map(a => typeof a === 'string' ? a : a.answer).join('\n')
+      : String(answers);
     
-    Верни ТОЛЬКО одно слово: "lost", "awakening" или "ready".`;
+    const prompt = `Проанализируй ответы пользователя и определи его архетип:
     
-    const systemPrompt = "You are an AI classifier. Analyze the user's response and categorize them. Return only one word without explanation.";
+    Ответы:
+    ${answersText}
+    
+    Определи, какой из четырёх архетипов лучше всего подходит пользователю:
+    1. Воин - решительный, действующий, преодолевающий препятствия
+    2. Маг - аналитический, изучающий, стратегический
+    3. Искатель - творческий, любознательный, экспериментирующий
+    4. Тень - скептичный, критичный, видящий скрытые мотивы
+    
+    Верни результат в формате JSON:
+    {
+      "type": "Название архетипа (Воин, Маг, Искатель или Тень)",
+      "description": "Краткое описание архетипа и как он проявляется у пользователя (2-3 предложения)",
+      "CTA": "Призыв к действию для этого архетипа (1 предложение)"
+    }`;
+    
+    const systemPrompt = "You are an expert psychologist specializing in archetypes. Analyze the user's answers and determine their archetype. Return only valid JSON.";
     
     const response = await callGPT(prompt, systemPrompt);
     
     if (response.success && response.data) {
-      const result = response.data.toLowerCase().trim();
-      
-      if (result.includes('lost')) return 'lost';
-      if (result.includes('awakening')) return 'awakening';
-      if (result.includes('ready')) return 'ready';
-      
-      // Default to awakening if response is unclear
-      return 'awakening';
+      try {
+        // Try direct JSON parse first
+        const parsedData = JSON.parse(response.data);
+        return {
+          success: true,
+          data: parsedData,
+          strategy: 'direct_json_parse'
+        };
+      } catch (jsonError) {
+        // Try to extract JSON using regex
+        try {
+          const jsonRegex = /\{(?:[^{}]|(?:\{[^{}]*\}))*\}/g;
+          const jsonMatches = response.data.match(jsonRegex);
+          
+          if (jsonMatches && jsonMatches.length > 0) {
+            const parsedData = JSON.parse(jsonMatches[0]);
+            return {
+              success: true,
+              data: parsedData,
+              strategy: 'regex_json_extraction'
+            };
+          }
+        } catch (regexError) {
+          // Try field extraction
+          try {
+            const typeRegex = /"type"\s*:\s*"([^"]*)"/;
+            const descRegex = /"description"\s*:\s*"([^"]*)"/;
+            const ctaRegex = /"CTA"\s*:\s*"([^"]*)"/;
+            
+            const typeMatch = response.data.match(typeRegex);
+            const descMatch = response.data.match(descRegex);
+            const ctaMatch = response.data.match(ctaRegex);
+            
+            if (typeMatch) {
+              return {
+                success: true,
+                data: {
+                  type: typeMatch[1],
+                  description: descMatch ? descMatch[1] : "Описание архетипа",
+                  CTA: ctaMatch ? ctaMatch[1] : "Действуй согласно своему архетипу!"
+                },
+                strategy: 'field_extraction'
+              };
+            }
+          } catch (fieldError) {
+            // Try keyword analysis
+            const archetypes = ['Воин', 'Маг', 'Искатель', 'Тень'];
+            for (const archetype of archetypes) {
+              if (response.data.includes(archetype)) {
+                return {
+                  success: true,
+                  data: {
+                    type: archetype,
+                    description: `Ты - ${archetype}. Твой путь уникален и полон возможностей.`,
+                    CTA: "Действуй согласно своему архетипу!"
+                  },
+                  strategy: 'keyword_analysis'
+                };
+              }
+            }
+          }
+        }
+      }
     }
     
-    // Fallback to simple keyword analysis
-    const lowercaseInput = input.toLowerCase();
-    
-    if (lowercaseInput.includes('не знаю') || 
-        lowercaseInput.includes('новичок') || 
-        lowercaseInput.includes('потерян')) {
-      return 'lost';
-    }
-    
-    if (lowercaseInput.includes('опыт') || 
-        lowercaseInput.includes('знаю') || 
-        lowercaseInput.includes('эксперт')) {
-      return 'ready';
-    }
-    
-    // Default to awakening
-    return 'awakening';
+    // If all parsing strategies fail, use fallback
+    return {
+      success: true,
+      data: analyzeFallbackArchetype(answers),
+      strategy: 'fallback_local_analysis'
+    };
   } catch (error) {
-    console.error('Error processing user input:', error);
-    // Default to awakening on error
-    return 'awakening';
+    console.error('Error in getArchetypeAnalysis:', error);
+    
+    // Return fallback analysis
+    return {
+      success: true,
+      data: analyzeFallbackArchetype(answers),
+      strategy: 'fallback_local_analysis_after_error'
+    };
   }
 };
 
-// Generate personalized response based on user path
-export const generatePathResponse = async (path: 'lost' | 'awakening' | 'ready', userName?: string): Promise<string> => {
+// Fallback archetype analysis when API fails
+export const analyzeFallbackArchetype = (answers: any[]): any => {
   try {
-    let prompt = '';
+    // Default fallback
+    const defaultArchetype = {
+      type: 'Искатель',
+      description: 'Ты - Искатель. Тебя отличает любознательность и стремление к новым горизонтам. Ты всегда ищешь новые возможности и готов экспериментировать.',
+      CTA: 'Исследуй новые возможности AI и не бойся экспериментировать!'
+    };
     
-    switch (path) {
-      case 'lost':
-        prompt = `Пользователь ${userName ? userName : ''} выбрал путь "Я потерян" (новичок в AI). 
-        Дай краткое, дружелюбное и мотивирующее объяснение, что такое AI простыми словами.
-        Объясни, как AI может помочь в повседневной жизни.
-        Будь дерзким, но понятным. Максимум 4 предложения.`;
-        break;
-        
-      case 'awakening':
-        prompt = `Пользователь ${userName ? userName : ''} выбрал путь "Хочу пробудиться" (начать изучать AI).
-        Дай краткое, энергичное приветствие и объясни, что такое "пробуждение" в контексте AI.
-        Упомяни, что пользователь узнает свой архетип и получит персональное пророчество.
-        Будь вдохновляющим и мотивирующим. Максимум 4 предложения.`;
-        break;
-        
-      case 'ready':
-        prompt = `Пользователь ${userName ? userName : ''} выбрал путь "Я уже в теме" (опытный в AI).
-        Дай краткое, уважительное приветствие "хакеру" и упомяни продвинутые инструменты.
-        Упомяни систему XP и уровней, а также персонализацию через архетипы.
-        Будь техничным и прямолинейным. Максимум 4 предложения.`;
-        break;
+    // If no answers, return default
+    if (!answers || answers.length === 0) {
+      return defaultArchetype;
     }
     
-    const response = await callGPT(prompt);
+    // Calculate scores for each archetype
+    let scores = {
+      warrior: 0,
+      mage: 0,
+      seeker: 0,
+      shadow: 0
+    };
+    
+    // Process answers
+    answers.forEach(answer => {
+      // If answer has weight property
+      if (answer && typeof answer === 'object' && answer.weight) {
+        scores.warrior += answer.weight.warrior || 0;
+        scores.mage += answer.weight.mage || 0;
+        scores.seeker += answer.weight.seeker || 0;
+        scores.shadow += answer.weight.shadow || 0;
+      } else if (typeof answer === 'string') {
+        // Simple keyword analysis for string answers
+        const lowerAnswer = answer.toLowerCase();
+        
+        if (lowerAnswer.includes('действ') || lowerAnswer.includes('решит') || lowerAnswer.includes('быстр')) {
+          scores.warrior += 2;
+        }
+        
+        if (lowerAnswer.includes('анализ') || lowerAnswer.includes('изуч') || lowerAnswer.includes('понима')) {
+          scores.mage += 2;
+        }
+        
+        if (lowerAnswer.includes('исследова') || lowerAnswer.includes('нов') || lowerAnswer.includes('интерес')) {
+          scores.seeker += 2;
+        }
+        
+        if (lowerAnswer.includes('скрыт') || lowerAnswer.includes('глубин') || lowerAnswer.includes('истин')) {
+          scores.shadow += 2;
+        }
+      }
+    });
+    
+    // Determine highest score
+    const maxScore = Math.max(scores.warrior, scores.mage, scores.seeker, scores.shadow);
+    
+    // Return corresponding archetype
+    if (maxScore === scores.warrior) {
+      return {
+        type: 'Воин',
+        description: 'Ты - Воин. Тебя отличает решительность и стремление к действию. Ты не боишься препятствий и всегда готов преодолевать трудности.',
+        CTA: 'Действуй смело и решительно в мире AI!'
+      };
+    } else if (maxScore === scores.mage) {
+      return {
+        type: 'Маг',
+        description: 'Ты - Маг. Тебя отличает аналитический склад ума и стремление к глубокому пониманию. Ты ценишь знания и системный подход.',
+        CTA: 'Изучай глубинные принципы AI и создавай мощные стратегии!'
+      };
+    } else if (maxScore === scores.shadow) {
+      return {
+        type: 'Тень',
+        description: 'Ты - Тень. Тебя отличает способность видеть скрытые мотивы и глубинные процессы. Ты не принимаешь всё на веру и ищешь истинное значение.',
+        CTA: 'Раскрывай скрытый потенциал AI и находи неочевидные решения!'
+      };
+    } else {
+      return defaultArchetype;
+    }
+  } catch (error) {
+    console.error('Error in fallback archetype analysis:', error);
+    
+    // Return safe default
+    return {
+      type: 'Искатель',
+      description: 'Ты - Искатель. Тебя отличает любознательность и стремление к новым горизонтам.',
+      CTA: 'Исследуй новые возможности AI и не бойся экспериментировать!'
+    };
+  }
+};
+
+// Get prophecy from GPT
+export const getProphecy = async (archetype: string): Promise<GPTResponse> => {
+  try {
+    const prompt = `Создай персональное пророчество для пользователя с архетипом "${archetype}".
+    
+    Пророчество должно:
+    - Быть вдохновляющим и мотивирующим
+    - Содержать метафоры и образы, связанные с архетипом
+    - Упоминать путь развития в мире AI и технологий
+    - Быть кратким (3-4 предложения)
+    - Иметь киберпанк/футуристический оттенок
+    
+    Верни только текст пророчества без кавычек и дополнительных пояснений.`;
+    
+    const systemPrompt = "You are a mystical AI oracle. Create a personalized prophecy for the user based on their archetype. Be inspiring and metaphorical.";
+    
+    const response = await callGPT(prompt, systemPrompt);
     
     if (response.success && response.data) {
-      return response.data;
+      // Clean up response
+      let prophecy = response.data;
+      
+      // Remove quotes if present
+      prophecy = prophecy.replace(/^["']|["']$/g, '');
+      
+      return {
+        success: true,
+        data: prophecy
+      };
     }
     
-    // Fallback responses if API fails
-    const fallbackResponses = {
-      lost: "Не парься, бро. AI — это просто инструмент, как молоток, только для мозга. Он может писать тексты, создавать картинки и отвечать на вопросы. Просто скажи, что нужно — и AI сделает это за тебя.",
-      awakening: "Отлично! Пробуждение — это путь трансформации. Ты станешь тем, кто использует AI как продолжение своего разума. Мы определим твой архетип и дадим персональное пророчество. Готов начать?",
-      ready: "Вот это я понимаю. Хакер в доме. У меня есть набор продвинутых AI-инструментов, которые выведут твои навыки на новый уровень. Плюс, тут есть система XP и уровней для отслеживания прогресса."
+    // Fallback prophecies
+    const fallbackProphecies: Record<string, string> = {
+      'Воин': 'Твоя сила растёт с каждым вызовом. Иди вперёд, сокрушая препятствия на пути к AI-мастерству. В цифровом мире ты станешь легендой, чьи решения меняют реальность.',
+      'Маг': 'Знания текут через тебя, как река мудрости. Используй магию AI для создания невозможного. Твой разум - ключ к алгоритмам, которые изменят будущее.',
+      'Искатель': 'Твой путь полон открытий и чудес. Каждый шаг ведёт к новым горизонтам познания. В бескрайнем океане данных ты найдёшь сокровища, о которых другие даже не подозревают.',
+      'Тень': 'В глубинах сознания скрыты великие тайны. Раскрой силу скрытого знания. Там, где другие видят лишь поверхность, ты различаешь истинные паттерны реальности.'
     };
     
-    return fallbackResponses[path];
+    return {
+      success: true,
+      data: fallbackProphecies[archetype] || 'Твой путь уникален и полон возможностей. Следуй своему сердцу и интуиции в мире AI.'
+    };
   } catch (error) {
-    console.error('Error generating path response:', error);
+    console.error('Error in getProphecy:', error);
     
-    // Fallback responses if function fails
-    const fallbackResponses = {
-      lost: "Не парься, бро. AI — это просто инструмент, как молоток, только для мозга. Он может писать тексты, создавать картинки и отвечать на вопросы. Просто скажи, что нужно — и AI сделает это за тебя.",
-      awakening: "Отлично! Пробуждение — это путь трансформации. Ты станешь тем, кто использует AI как продолжение своего разума. Мы определим твой архетип и дадим персональное пророчество. Готов начать?",
-      ready: "Вот это я понимаю. Хакер в доме. У меня есть набор продвинутых AI-инструментов, которые выведут твои навыки на новый уровень. Плюс, тут есть система XP и уровней для отслеживания прогресса."
+    // Fallback prophecies
+    const fallbackProphecies: Record<string, string> = {
+      'Воин': 'Твоя сила растёт с каждым вызовом. Иди вперёд, сокрушая препятствия на пути к AI-мастерству. В цифровом мире ты станешь легендой, чьи решения меняют реальность.',
+      'Маг': 'Знания текут через тебя, как река мудрости. Используй магию AI для создания невозможного. Твой разум - ключ к алгоритмам, которые изменят будущее.',
+      'Искатель': 'Твой путь полон открытий и чудес. Каждый шаг ведёт к новым горизонтам познания. В бескрайнем океане данных ты найдёшь сокровища, о которых другие даже не подозревают.',
+      'Тень': 'В глубинах сознания скрыты великие тайны. Раскрой силу скрытого знания. Там, где другие видят лишь поверхность, ты различаешь истинные паттерны реальности.'
     };
     
-    return fallbackResponses[path];
+    return {
+      success: true,
+      data: fallbackProphecies[archetype] || 'Твой путь уникален и полон возможностей. Следуй своему сердцу и интуиции в мире AI.'
+    };
   }
 };

@@ -11,6 +11,20 @@ let navigationAttempts = 0;
 const MAX_NAVIGATION_ATTEMPTS = 3;
 
 /**
+ * Debounce function to prevent multiple rapid calls
+ * @param func The function to debounce
+ * @param delay Delay in milliseconds
+ * @returns Debounced function
+ */
+export function debounce<T extends (...args: any[]) => void>(func: T, delay: number): T {
+  let timeoutId: ReturnType<typeof setTimeout>;
+  return function(this: any, ...args: any[]) {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => func.apply(this, args), delay);
+  } as T;
+}
+
+/**
  * Safely navigate to a new screen with debouncing to prevent multiple clicks
  * @param callback The navigation callback function
  * @param delay Delay in milliseconds before allowing another navigation
@@ -142,7 +156,7 @@ export const forceNavigate = (path: string): void => {
       action: 'forceNavigate'
     });
     
-    // Last resort
+    // Last resort - direct location change
     window.location.href = path;
   }
 };

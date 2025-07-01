@@ -31,6 +31,7 @@ const renderApp = () => {
     localStorage.removeItem('neuropul_current_screen');
     sessionStorage.removeItem('neuropul_current_screen');
     localStorage.removeItem('neuropul_navigation_in_progress');
+    localStorage.removeItem('hasPassedPortal');
     
     const root = createRoot(rootElement);
     

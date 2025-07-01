@@ -123,6 +123,8 @@ export const forceNavigate = (path: string): void => {
     // Clear any portal state
     localStorage.removeItem('neuropul_current_screen');
     sessionStorage.removeItem('neuropul_current_screen');
+    localStorage.removeItem('neuropul_navigation_in_progress');
+    localStorage.removeItem('hasPassedPortal');
     
     // If too many attempts, use direct location change
     if (navigationAttempts > MAX_NAVIGATION_ATTEMPTS) {
@@ -151,8 +153,15 @@ export const forceNavigate = (path: string): void => {
 export const emergencyReset = (): void => {
   try {
     console.log('🧠 SYSTEM CLEAR INITIATED');
+    
+    // Clear all localStorage items
     localStorage.clear();
     sessionStorage.clear();
+    
+    // Reset navigation state
+    resetNavigationState();
+    
+    // Navigate to home
     window.location.href = '/';
   } catch (error) {
     console.error('[Navigation] Emergency reset failed:', error);

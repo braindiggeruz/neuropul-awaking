@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { emergencyReset } from '../utils/navigationUtils';
 
 interface EmergencyResetButtonProps {
@@ -6,7 +6,7 @@ interface EmergencyResetButtonProps {
 }
 
 const EmergencyResetButton: React.FC<EmergencyResetButtonProps> = ({ className = '' }) => {
-  const [showConfirm, setShowConfirm] = React.useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   
   const handleClick = () => {
     if (showConfirm) {

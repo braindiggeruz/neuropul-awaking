@@ -9,6 +9,7 @@ import { saveUserProgress, loadUserProgress, updateUserProgress } from '../utils
 import { logError } from '../lib/utils/errorLogger';
 import { cleanupAudio } from '../utils/audioUtils';
 import EmergencyResetButton from '../components/EmergencyResetButton';
+import { debounce } from '../utils/navigationUtils';
 
 type Screen = 'intro' | 'lost' | 'awakening' | 'ready' | 'portal';
 
@@ -152,10 +153,17 @@ const TraeAwakensPage: React.FC = () => {
     };
   }, []);
 
-  // Force navigation to home
-  const forceNavigateToHome = () => {
+  // Force navigation to home - with debounce to prevent multiple calls
+  const forceNavigateToHome = debounce(() => {
     try {
       console.log('[TraeAwakensPage] Force navigation triggered - current screen:', currentScreen);
+      
+      // Prevent multiple navigation attempts
+      if (hasNavigatedRef.current) {
+        console.log('[TraeAwakensPage] Already navigated, ignoring duplicate call');
+        return;
+      }
+      
       navigationAttemptRef.current += 1;
       
       // Clear all portal-related storage
@@ -166,9 +174,10 @@ const TraeAwakensPage: React.FC = () => {
       localStorage.removeItem('hasPassedPortal');
       
       // If we've tried navigate too many times, use direct location change
-      if (navigationAttemptRef.current > 2 && !hasNavigatedRef.current) {
+      if (navigationAttemptRef.current > 2) {
         console.log('[TraeAwakensPage] Too many navigation attempts, using direct location change');
         window.location.href = '/';
+        hasNavigatedRef.current = true;
         return;
       }
       
@@ -186,7 +195,7 @@ const TraeAwakensPage: React.FC = () => {
       // Last resort - direct location change
       window.location.href = '/';
     }
-  };
+  }, 300); // Debounce for 300ms to prevent multiple rapid calls
 
   const handlePathSelect = (path: 'lost' | 'awakening' | 'ready') => {
     // Prevent multiple navigation attempts
@@ -306,7 +315,7 @@ const TraeAwakensPage: React.FC = () => {
       // Set completion flag - FIXED: Use string "true" instead of boolean true
       localStorage.setItem('neuropul_intro_completed', 'true');
       localStorage.setItem('neuropul_intro_completed_at', new Date().toISOString());
-      localStorage.setItem('hasPassedPortal', 'true');
+      localStorage.setItem('hasPassedPortal', 'true'); // FIXED: Use string "true" instead of boolean true
       
       // Update user progress
       updateUserProgress({

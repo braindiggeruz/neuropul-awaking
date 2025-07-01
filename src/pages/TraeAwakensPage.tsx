@@ -98,6 +98,8 @@ const TraeAwakensPage: React.FC = () => {
       
       // Set mounted flag
       isMountedRef.current = true;
+      
+      console.log('🔍 TraeAwakensPage initialization complete');
     } catch (error) {
       if (import.meta.env.MODE !== 'production') {
         console.error('Error initializing session:', error);
@@ -110,6 +112,7 @@ const TraeAwakensPage: React.FC = () => {
     
     // Cleanup function
     return () => {
+      console.log('🔍 TraeAwakensPage unmounting, cleaning up resources');
       isMountedRef.current = false;
       
       if (inactivityTimerRef.current) {
@@ -129,6 +132,7 @@ const TraeAwakensPage: React.FC = () => {
   const handlePathSelect = (path: 'lost' | 'awakening' | 'ready') => {
     // Prevent multiple navigation attempts
     if (isNavigatingRef.current) {
+      console.log('🔍 Navigation already in progress, ignoring path selection');
       return;
     }
     
@@ -160,10 +164,13 @@ const TraeAwakensPage: React.FC = () => {
         lastActive: new Date().toISOString()
       });
       
+      console.log('🔍 Path selection complete, state updated');
+      
       // Reset navigation lock after a delay
       const resetTimeout = setTimeout(() => {
         if (isMountedRef.current) {
           isNavigatingRef.current = false;
+          console.log('🔍 Navigation lock reset');
         }
       }, 500);
       
@@ -185,6 +192,7 @@ const TraeAwakensPage: React.FC = () => {
   const handleBack = () => {
     // Prevent multiple navigation attempts
     if (isNavigatingRef.current) {
+      console.log('🔍 Navigation already in progress, ignoring back action');
       return;
     }
     
@@ -207,10 +215,13 @@ const TraeAwakensPage: React.FC = () => {
         lastActive: new Date().toISOString()
       });
       
+      console.log('🔍 Back navigation complete, state updated');
+      
       // Reset navigation lock after a delay
       const resetTimeout = setTimeout(() => {
         if (isMountedRef.current) {
           isNavigatingRef.current = false;
+          console.log('🔍 Navigation lock reset');
         }
       }, 500);
       
@@ -232,6 +243,7 @@ const TraeAwakensPage: React.FC = () => {
   const handleContinueToPortal = () => {
     // Prevent multiple navigation attempts
     if (isNavigatingRef.current) {
+      console.log('🔍 Navigation already in progress, ignoring continue action');
       return;
     }
     
@@ -419,10 +431,25 @@ const TraeAwakensPage: React.FC = () => {
               <div className="w-16 h-16 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
               <p className="text-white text-lg">Переход к порталу пробуждения...</p>
               <p className="text-gray-400 text-sm mt-2">Пожалуйста, подождите...</p>
+              <div className="mt-8">
+                <button 
+                  onClick={() => navigate('/', { replace: true })}
+                  className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm"
+                >
+                  Перейти на главную вручную
+                </button>
+              </div>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
+      
+      {/* Debug info in development mode */}
+      {import.meta.env.MODE === 'development' && (
+        <div className="fixed bottom-4 left-4 bg-black bg-opacity-80 text-green-400 p-2 rounded text-xs font-mono z-50">
+          Screen: {currentScreen} | Path: {userPath || 'none'} | Session: {sessionId.substring(0, 8)}...
+        </div>
+      )}
     </div>
   );
 };

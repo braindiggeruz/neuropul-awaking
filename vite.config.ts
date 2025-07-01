@@ -10,6 +10,8 @@ export default defineConfig(({ mode }) => {
     plugins: [react()],
     optimizeDeps: {
       exclude: ['lucide-react'],
+      include: ['react', 'react-dom', 'react-router-dom', 'framer-motion'],
+      force: true
     },
     server: {
       proxy: {
@@ -29,18 +31,13 @@ export default defineConfig(({ mode }) => {
       'import.meta.env.ENABLE_DEBUG': JSON.stringify(env.ENABLE_DEBUG === 'true'),
       'import.meta.env.DISABLE_PDF_GEN': JSON.stringify(env.DISABLE_PDF_GEN === 'true'),
       'import.meta.env.DEFAULT_LANGUAGE': JSON.stringify(env.DEFAULT_LANGUAGE || 'ru'),
-      // Add React Router v7 future flags
-      'process.env.ROUTER_FUTURE_FLAGS': JSON.stringify({
-        v7_startTransition: true,
-        v7_relativeSplatPath: true
-      })
     },
     build: {
-      sourcemap: false,
+      sourcemap: true, // Enable for debugging
       minify: 'terser',
       terserOptions: {
         compress: {
-          drop_console: mode === 'production',
+          drop_console: false, // Keep console logs for debugging
           drop_debugger: mode === 'production',
         },
       },
@@ -59,8 +56,9 @@ export default defineConfig(({ mode }) => {
       emptyOutDir: true,
     },
     css: {
-      devSourcemap: false,
+      devSourcemap: true, // Enable for debugging
     },
     cacheDir: '.vite_cache',
+    clearScreen: false, // Keep console output
   };
 });

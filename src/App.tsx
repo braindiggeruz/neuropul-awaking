@@ -37,13 +37,23 @@ function App() {
       sessionStorage.setItem('redirectAfterAuth', redirectPath);
     }
     
-    // Log app initialization
-    console.log('🚀 App initialized');
+    // Remove initial loader if it's still there
+    const initialLoader = document.getElementById('initial-loader');
+    if (initialLoader) {
+      console.log('🧹 Removing initial loader from App component');
+      initialLoader.style.opacity = '0';
+      initialLoader.style.transition = 'opacity 0.5s ease';
+      setTimeout(() => {
+        if (initialLoader.parentNode) {
+          initialLoader.remove();
+        }
+      }, 500);
+    }
   }, []);
 
   return (
     <FocusManager>
-      <Router>
+      <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <ScrollToTop />
         <TitleManager>
           <Suspense fallback={<LoadingFallback />}>

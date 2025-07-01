@@ -6,64 +6,65 @@ import './styles/cyberpunk.css';
 import './styles/global.css';
 import { setupGlobalErrorHandling } from './lib/utils/errorLogger';
 
-// Log application startup
-console.log("🌐 main.tsx is starting up");
-
 // Set up global error handling
 setupGlobalErrorHandling();
 
-// Function to remove the initial loader
+// Удаление лоадера если он остался висеть
 const removeLoader = () => {
-  console.log("Attempting to remove initial loader");
+  console.log('🧹 Attempting to remove initial loader');
   const loader = document.getElementById('initial-loader');
   if (loader) {
-    console.log("Initial loader found, removing");
-    loader.remove();
-  } else {
-    console.log("Initial loader not found");
+    console.log('🧹 Initial loader found, removing');
+    loader.style.opacity = '0';
+    loader.style.transition = 'opacity 0.5s ease';
+    setTimeout(() => {
+      if (loader.parentNode) {
+        loader.remove();
+        console.log('🧹 Initial loader removed');
+      }
+    }, 500);
   }
 };
 
-// Remove loader after a timeout as a fallback
+// На всякий случай удалим через 3 сек (если что-то пошло не так)
 setTimeout(removeLoader, 3000);
 
-// Remove loader on window load
+// Событие полной загрузки окна
 window.addEventListener('load', removeLoader);
 
-// Remove loader on DOMContentLoaded
+// DOMContentLoaded (на всякий случай)
 document.addEventListener('DOMContentLoaded', removeLoader);
+
+console.log('🌐 main.tsx запускается');
 
 // Create a function to handle errors during rendering
 const renderApp = () => {
   try {
-    console.log("Finding root element");
+    console.log('🔍 Finding root element');
     const rootElement = document.getElementById('root');
     if (!rootElement) {
       throw new Error('Root element not found');
     }
     
-    console.log("Creating React root");
+    console.log('🔍 Creating React root');
     const root = createRoot(rootElement);
     
-    console.log("Rendering React application");
+    console.log('🔍 Rendering React app');
     root.render(
       <StrictMode>
         <App />
       </StrictMode>
     );
     
-    console.log("🚀 React application rendered successfully");
-    
-    // Remove loader after successful render
-    removeLoader();
+    console.log('✅ React rendered successfully');
   } catch (error) {
-    console.error('Error rendering app:', error);
+    console.error('❌ Error rendering app:', error);
     
     // Display a minimal fallback UI
     const rootElement = document.getElementById('root');
     if (rootElement) {
       rootElement.innerHTML = `
-        <div style="min-height: 100vh; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); display: flex; align-items: center; justify-center; padding: 20px; color: white; font-family: sans-serif;">
+        <div style="min-height: 100vh; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); display: flex; align-items: center; justify-content: center; padding: 20px; color: white; font-family: sans-serif;">
           <div style="background: rgba(0,0,0,0.5); border-radius: 12px; padding: 24px; max-width: 500px; text-align: center;">
             <div style="font-size: 48px; margin-bottom: 16px;">⚠️</div>
             <h2 style="font-size: 24px; margin-bottom: 16px;">Ошибка запуска приложения</h2>
@@ -75,14 +76,10 @@ const renderApp = () => {
         </div>
       `;
     }
-    
-    // Remove loader even if there's an error
-    removeLoader();
   }
 };
 
 // Call the render function
 renderApp();
 
-// Log completion
-console.log("🚀 main.tsx execution completed");
+console.log('🚀 React отрендерен');

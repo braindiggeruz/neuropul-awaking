@@ -29,7 +29,6 @@ const TraeAwakensPage: React.FC = () => {
   useEffect(() => {
     try {
       console.log('🔍 TraeAwakensPage mounted');
-      console.log('🔍 Navigation object available:', !!navigate);
       
       // Check if there's a saved path and screen
       const savedPath = localStorage.getItem('neuropul_user_path');
@@ -37,13 +36,13 @@ const TraeAwakensPage: React.FC = () => {
       
       if (savedPath) {
         setUserPath(savedPath);
-        console.log(`🔍 Saved path found: ${savedPath}`);
+        console.log('📂 Loaded saved path:', savedPath);
         
         // If there's a saved screen that's not 'intro', restore it
         if (savedScreen && savedScreen !== 'intro' && 
             ['lost', 'awakening', 'ready', 'portal'].includes(savedScreen)) {
           setCurrentScreen(savedScreen as Screen);
-          console.log(`🔍 Restoring saved screen: ${savedScreen}`);
+          console.log('📂 Restored saved screen:', savedScreen);
         }
       }
       
@@ -101,11 +100,14 @@ const TraeAwakensPage: React.FC = () => {
       // Set mounted flag
       isMountedRef.current = true;
       
-      console.log('🔍 TraeAwakensPage initialization complete');
-    } catch (error) {
-      if (import.meta.env.MODE !== 'production') {
-        console.error('Error initializing session:', error);
+      // Remove initial loader if it's still there
+      const initialLoader = document.getElementById('initial-loader');
+      if (initialLoader) {
+        console.log('🧹 Removing initial loader that was still present');
+        initialLoader.style.display = 'none';
       }
+    } catch (error) {
+      console.error('Error initializing session:', error);
       logError(error, {
         component: 'TraeAwakensPage',
         action: 'initialize'
@@ -114,7 +116,7 @@ const TraeAwakensPage: React.FC = () => {
     
     // Cleanup function
     return () => {
-      console.log('🔍 TraeAwakensPage unmounting, cleaning up resources');
+      console.log('🧹 TraeAwakensPage unmounting, cleaning up resources');
       isMountedRef.current = false;
       
       if (inactivityTimerRef.current) {
@@ -129,20 +131,19 @@ const TraeAwakensPage: React.FC = () => {
       // Clean up audio
       cleanupAudio();
     };
-  }, [navigate]);
+  }, []);
 
   const handlePathSelect = (path: 'lost' | 'awakening' | 'ready') => {
     // Prevent multiple navigation attempts
     if (isNavigatingRef.current) {
-      console.log('🔍 Navigation already in progress, ignoring path selection');
+      console.log('⚠️ Navigation already in progress, ignoring duplicate request');
       return;
     }
     
     isNavigatingRef.current = true;
+    console.log(`🔄 Selecting path: ${path}`);
     
     try {
-      console.log(`🔍 Path selected: ${path}`);
-      
       // Update state
       if (isMountedRef.current) {
         setCurrentScreen(path);
@@ -166,21 +167,17 @@ const TraeAwakensPage: React.FC = () => {
         lastActive: new Date().toISOString()
       });
       
-      console.log('🔍 Path selection complete, state updated');
-      
       // Reset navigation lock after a delay
       const resetTimeout = setTimeout(() => {
         if (isMountedRef.current) {
           isNavigatingRef.current = false;
-          console.log('🔍 Navigation lock reset');
+          console.log('🔓 Navigation lock reset');
         }
       }, 500);
       
       timeoutRefs.current.push(resetTimeout);
     } catch (error) {
-      if (import.meta.env.MODE !== 'production') {
-        console.error('Error in handlePathSelect:', error);
-      }
+      console.error('Error in handlePathSelect:', error);
       logError(error, {
         component: 'TraeAwakensPage',
         action: 'handlePathSelect'
@@ -194,15 +191,14 @@ const TraeAwakensPage: React.FC = () => {
   const handleBack = () => {
     // Prevent multiple navigation attempts
     if (isNavigatingRef.current) {
-      console.log('🔍 Navigation already in progress, ignoring back action');
+      console.log('⚠️ Navigation already in progress, ignoring duplicate request');
       return;
     }
     
     isNavigatingRef.current = true;
+    console.log('🔄 Going back to intro screen');
     
     try {
-      console.log('🔍 Going back to intro screen');
-      
       // Update state
       if (isMountedRef.current) {
         setCurrentScreen('intro');
@@ -217,21 +213,17 @@ const TraeAwakensPage: React.FC = () => {
         lastActive: new Date().toISOString()
       });
       
-      console.log('🔍 Back navigation complete, state updated');
-      
       // Reset navigation lock after a delay
       const resetTimeout = setTimeout(() => {
         if (isMountedRef.current) {
           isNavigatingRef.current = false;
-          console.log('🔍 Navigation lock reset');
+          console.log('🔓 Navigation lock reset');
         }
       }, 500);
       
       timeoutRefs.current.push(resetTimeout);
     } catch (error) {
-      if (import.meta.env.MODE !== 'production') {
-        console.error('Error in handleBack:', error);
-      }
+      console.error('Error in handleBack:', error);
       logError(error, {
         component: 'TraeAwakensPage',
         action: 'handleBack'
@@ -245,16 +237,14 @@ const TraeAwakensPage: React.FC = () => {
   const handleContinueToPortal = () => {
     // Prevent multiple navigation attempts
     if (isNavigatingRef.current) {
-      console.log('🔍 Navigation already in progress, ignoring continue action');
+      console.log('⚠️ Navigation already in progress, ignoring duplicate request');
       return;
     }
     
     isNavigatingRef.current = true;
-    navigationAttempts.current += 1;
+    console.log('🔄 Continuing to portal');
     
     try {
-      console.log('🔍 Continuing to portal');
-      
       // Update state
       if (isMountedRef.current) {
         setCurrentScreen('portal');
@@ -280,47 +270,56 @@ const TraeAwakensPage: React.FC = () => {
         localStorage.setItem('neuropul_show_cta', 'true');
       }
       
-      console.log('🔍 Preparing to navigate to home page');
-      
       // Navigate to home or premium page after a delay
       const redirectTimeout = setTimeout(() => {
         if (isMountedRef.current) {
-          console.log('🔍 Executing navigation');
+          navigationAttempts.current += 1;
+          console.log(`🧭 Navigation attempt ${navigationAttempts.current}`);
           
           try {
             // Check if we should show CTA
-            if (localStorage.getItem('neuropul_show_cta') === 'true' && localStorage.getItem('neuropul_is_paid') !== 'true') {
-              // Navigate to premium page
-              console.log('🔍 Navigating to premium page');
+            if (localStorage.getItem('neuropul_show_cta') === 'true' && 
+                localStorage.getItem('neuropul_is_paid') !== 'true') {
+              console.log('🔄 Navigating to premium page');
               navigate('/premium', { replace: true });
             } else {
-              // Navigate to home page
-              console.log('🔍 Navigating to home page');
+              console.log('🔄 Navigating to home page');
               navigate('/', { replace: true });
             }
+            
+            console.log('✅ Navigation completed successfully');
             
             // Reset navigation lock
             isNavigatingRef.current = false;
           } catch (navError) {
-            console.error('Navigation error:', navError);
-            isNavigatingRef.current = false;
+            console.error('❌ Navigation error:', navError);
+            logError(navError, {
+              component: 'TraeAwakensPage',
+              action: 'navigate'
+            });
             
-            // If navigation fails, try again with a longer delay
+            // If navigation fails and we haven't tried too many times, try again
             if (navigationAttempts.current < 3) {
-              console.log(`🔍 Navigation attempt ${navigationAttempts.current} failed, retrying...`);
-              setTimeout(() => {
-                handleContinueToPortal();
-              }, 1000 * navigationAttempts.current);
+              console.log(`🔄 Retrying navigation (attempt ${navigationAttempts.current + 1}/3)`);
+              const retryTimeout = setTimeout(() => handleContinueToPortal(), 1000);
+              timeoutRefs.current.push(retryTimeout);
+            } else {
+              console.error('❌ Max navigation attempts reached, giving up');
+              isNavigatingRef.current = false;
+              
+              // Force reload as last resort
+              if (isMountedRef.current) {
+                console.log('🔄 Forcing page reload as fallback');
+                window.location.href = '/';
+              }
             }
           }
         }
-      }, 1500); // Increased delay to ensure state is saved before navigation
+      }, 1000);
       
       timeoutRefs.current.push(redirectTimeout);
     } catch (error) {
-      if (import.meta.env.MODE !== 'production') {
-        console.error('Error in handleContinueToPortal:', error);
-      }
+      console.error('Error in handleContinueToPortal:', error);
       logError(error, {
         component: 'TraeAwakensPage',
         action: 'handleContinueToPortal'
@@ -331,16 +330,8 @@ const TraeAwakensPage: React.FC = () => {
       
       // Fallback navigation
       if (isMountedRef.current) {
-        console.log('🔍 Fallback navigation to home page');
-        setTimeout(() => {
-          try {
-            navigate('/', { replace: true });
-          } catch (navError) {
-            console.error('Fallback navigation error:', navError);
-            // Last resort: direct location change
-            window.location.href = '/';
-          }
-        }, 2000);
+        console.log('🔄 Using fallback navigation');
+        window.location.href = '/';
       }
     }
   };
@@ -391,17 +382,24 @@ const TraeAwakensPage: React.FC = () => {
     };
   }, [currentScreen, navigate]);
 
-  // Manual navigation fallback
-  const handleManualNavigation = () => {
-    console.log('🔍 Manual navigation triggered');
-    try {
-      navigate('/', { replace: true });
-    } catch (error) {
-      console.error('Manual navigation error:', error);
-      // Direct location change as last resort
-      window.location.href = '/';
+  // Add emergency escape hatch
+  useEffect(() => {
+    if (currentScreen === 'portal') {
+      console.log('🚨 Portal screen detected, adding emergency escape timeout');
+      const escapeTimeout = setTimeout(() => {
+        if (currentScreen === 'portal' && isMountedRef.current) {
+          console.log('⚠️ Emergency escape triggered - portal screen was active too long');
+          window.location.href = '/';
+        }
+      }, 10000); // 10 seconds max on portal screen
+      
+      timeoutRefs.current.push(escapeTimeout);
+      
+      return () => {
+        clearTimeout(escapeTimeout);
+      };
     }
-  };
+  }, [currentScreen]);
 
   return (
     <div className="relative min-h-screen overflow-hidden">
@@ -461,31 +459,24 @@ const TraeAwakensPage: React.FC = () => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.5 }}
-            className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-blue-900 flex items-center justify-center"
+            className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-blue-900 flex items-center justify-center flex-col"
           >
             <div className="text-center">
               <div className="w-16 h-16 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
               <p className="text-white text-lg">Переход к порталу пробуждения...</p>
-              <p className="text-gray-400 text-sm mt-2">Пожалуйста, подождите...</p>
-              <div className="mt-8">
-                <button 
-                  onClick={handleManualNavigation}
-                  className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm"
-                >
-                  Перейти на главную вручную
-                </button>
-              </div>
+              <p className="text-gray-400 text-sm mt-4">Пожалуйста, подождите...</p>
             </div>
+            
+            {/* Emergency escape button */}
+            <button 
+              onClick={() => window.location.href = '/'}
+              className="mt-8 bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg transition-colors"
+            >
+              Перейти на главную вручную
+            </button>
           </motion.div>
         )}
       </AnimatePresence>
-      
-      {/* Debug info in development mode */}
-      {import.meta.env.MODE === 'development' && (
-        <div className="fixed bottom-4 left-4 bg-black bg-opacity-80 text-green-400 p-2 rounded text-xs font-mono z-50">
-          Screen: {currentScreen} | Path: {userPath || 'none'} | Session: {sessionId.substring(0, 8)}...
-        </div>
-      )}
     </div>
   );
 };

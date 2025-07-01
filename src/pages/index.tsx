@@ -8,6 +8,7 @@ export default function Home() {
   const [isInitialized, setIsInitialized] = useState(false);
   const [hasError, setHasError] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [hasPassedPortal, setHasPassedPortal] = useState(false);
 
   // Set up global error handling and initialize system
   useEffect(() => {
@@ -23,10 +24,14 @@ export default function Home() {
       localStorage.removeItem('neuropul_current_screen');
       sessionStorage.removeItem('neuropul_current_screen');
       localStorage.removeItem('neuropul_navigation_in_progress');
-      localStorage.removeItem('hasPassedPortal'); // ADDED: Clear hasPassedPortal flag
+      
+      // Check if user has passed portal
+      const portalPassed = localStorage.getItem('hasPassedPortal') === 'true';
+      setHasPassedPortal(portalPassed);
+      console.log('[Home] Has passed portal:', portalPassed);
       
       // Initialize system
-      const isPaid = localStorage.getItem('neuropul_is_paid') === 'true'; // FIXED: Check for string "true"
+      const isPaid = localStorage.getItem('neuropul_is_paid') === 'true';
       const userPath = localStorage.getItem('neuropul_user_path');
       const userName = localStorage.getItem('neuropul_user_name');
       const xp = parseInt(localStorage.getItem('neuropul_xp') || '0');

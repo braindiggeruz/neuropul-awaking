@@ -56,6 +56,12 @@ class ErrorBoundary extends Component<Props, State> {
       localStorage.setItem('neuropul_error_occurred', 'true');
       localStorage.setItem('neuropul_error_timestamp', new Date().toISOString());
       localStorage.setItem('neuropul_error_message', error.message);
+      
+      // Clear navigation state
+      localStorage.removeItem('neuropul_current_screen');
+      sessionStorage.removeItem('neuropul_current_screen');
+      localStorage.removeItem('neuropul_navigation_in_progress');
+      localStorage.removeItem('hasPassedPortal');
     } catch (storageError) {
       console.error('Failed to save error info to localStorage:', storageError);
     }

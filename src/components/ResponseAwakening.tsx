@@ -667,52 +667,6 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
           )}
         </AnimatePresence>
       </div>
-      
-      {/* Global CSS for cyberpunk effects */}
-      <style jsx global>{`
-        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;900&display=swap');
-        
-        @keyframes digitalRain {
-          0% { transform: translateY(-100px); }
-          100% { transform: translateY(100vh); }
-        }
-        
-        .bg-scanline {
-          background: linear-gradient(
-            to bottom,
-            transparent 50%,
-            rgba(0, 0, 0, 0.5) 50%
-          );
-          background-size: 100% 4px;
-        }
-        
-        .glitch-text {
-          position: relative;
-          animation: glitch 3s infinite;
-          color: rgba(139, 92, 246, 0.5);
-        }
-        
-        @keyframes glitch {
-          0% { transform: translate(0); }
-          20% { transform: translate(-2px, 2px); }
-          40% { transform: translate(-2px, -2px); }
-          60% { transform: translate(2px, 2px); }
-          80% { transform: translate(2px, -2px); }
-          100% { transform: translate(0); }
-        }
-        
-        .glitch-corner {
-          background: linear-gradient(45deg, transparent 48%, #00ffff 49%, transparent 51%);
-          animation: cornerGlitch 2s infinite;
-        }
-        
-        @keyframes cornerGlitch {
-          0% { transform: scale(1); opacity: 0.3; }
-          50% { transform: scale(1.2); opacity: 0.6; }
-          51% { transform: scale(0.8); opacity: 0.3; }
-          100% { transform: scale(1); opacity: 0.3; }
-        }
-      `}</style>
     </div>
   );
 };

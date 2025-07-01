@@ -1,0 +1,218 @@
+# NEUROPUL AI DEBUG LOG
+# Generated: ${new Date().toISOString()}
+
+## SYSTEM INFORMATION
+- Environment: ${import.meta.env.MODE || 'development'}
+- Debug Mode: ${import.meta.env.ENABLE_DEBUG === 'true' ? 'Enabled' : 'Disabled'}
+- Browser: ${navigator.userAgent}
+
+## CRITICAL ISSUES FIXED
+
+### 1. NAVIGATION LOOP FIXES
+- Fixed infinite navigation loop in TraeAwakensPage.tsx
+- Added emergency escape timeout for portal screen
+- Implemented force navigation with fallbacks
+- Added manual escape button for users
+
+```javascript
+// TraeAwakensPage.tsx - Emergency escape hatch
+useEffect(() => {
+  if (currentScreen === 'portal') {
+    console.log('[TraeAwakensPage] Portal screen detected, adding emergency escape timeout');
+    portalTimeoutRef.current = setTimeout(() => {
+      if (currentScreen === 'portal' && isMountedRef.current) {
+        console.log('[TraeAwakensPage] Force navigation triggered - still on portal screen');
+        forceNavigateToHome();
+      }
+    }, 8000); // 8 second escape hatch
+    
+    if (portalTimeoutRef.current) {
+      timeoutRefs.current.push(portalTimeoutRef.current);
+    }
+  }
+  
+  return () => {
+    if (portalTimeoutRef.current) {
+      clearTimeout(portalTimeoutRef.current);
+      portalTimeoutRef.current = null;
+    }
+  };
+}, [currentScreen]);
+```
+
+### 2. STORAGE CLEANUP
+- Added code to clear portal-related localStorage entries
+- Fixed storage management in multiple components
+- Implemented proper cleanup on component unmount
+
+```javascript
+// index.html - Initial cleanup script
+localStorage.removeItem('neuropul_current_screen');
+localStorage.removeItem('neuropul_navigation_in_progress');
+console.log('🧹 Cleared navigation state from HTML script');
+```
+
+### 3. ATTRIBUTE WARNINGS
+- Fixed `global` attribute warning in LanguageSwitcher component
+- Changed string attributes to proper JSX boolean expressions
+
+```javascript
+// Before
+<button global="true">...</button>
+
+// After
+<button global={true}>...</button>
+```
+
+### 4. AUDIO CONTEXT ISSUES
+- Fixed audio context state checking to prevent errors
+- Added proper cleanup for audio resources
+
+```javascript
+// audioUtils.ts - Fixed audio context closing
+if (audioContext && audioContext.state !== 'closed') {
+  audioContext.close().then(() => {
+    audioContext = null;
+  }).catch(err => {
+    if (import.meta.env.MODE !== 'production') {
+      console.error('Error closing audio context:', err);
+    }
+  });
+}
+```
+
+### 5. CSP AND MANIFEST ISSUES
+- Updated Content-Security-Policy to allow necessary resources
+- Fixed X-Frame-Options header to use SAMEORIGIN
+- Added proper icon files to the manifest
+
+```html
+<!-- index.html - Updated CSP -->
+<meta http-equiv="X-Frame-Options" content="SAMEORIGIN" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://api.dicebear.com https://*.supabase.co https://*.pexels.com https://media.giphy.com https://neuropul.uz; connect-src 'self' https://*.supabase.co https://api.openai.com;" />
+```
+
+### 6. ERROR HANDLING
+- Enhanced ErrorBoundary component with reset functionality
+- Added better error reporting and recovery
+- Implemented emergency reset button
+
+```javascript
+// ErrorBoundary.tsx - Added reset function
+handleReset = () => {
+  console.log('🧠 SYSTEM CLEAR INITIATED');
+  try {
+    localStorage.clear();
+    sessionStorage.clear();
+    window.location.href = '/';
+  } catch (error) {
+    console.error('Error during emergency reset:', error);
+    window.location.reload();
+  }
+};
+```
+
+### 7. INITIAL LOADER REMOVAL
+- Fixed initial loader removal in multiple places
+- Added fallback removal after timeout
+
+```javascript
+// main.tsx - Initial loader removal
+const initialLoader = document.getElementById('initial-loader');
+if (initialLoader && initialLoader.parentNode) {
+  console.log('🧹 Removing initial loader from main.tsx');
+  initialLoader.parentNode.removeChild(initialLoader);
+}
+```
+
+## COMPONENT ANALYSIS
+
+### App.tsx
+- Properly removes initial loader
+- Clears portal state on mount
+- Uses ErrorBoundary for error handling
+- Implements proper routing
+
+### TraeAwakensPage.tsx
+- Fixed navigation issues
+- Added emergency escape timeouts
+- Implemented proper cleanup
+- Added manual escape button
+
+### ResponseAwakening.tsx
+- Fixed navigation handling
+- Improved error handling
+- Added proper cleanup
+
+### main.tsx
+- Added error handling for rendering
+- Removes initial loader
+- Clears navigation state
+
+### navigationUtils.ts
+- Implemented safe navigation with fallbacks
+- Added emergency reset functionality
+- Tracks navigation attempts
+
+### EmergencyResetButton.tsx
+- Added for manual recovery
+- Includes confirmation step
+
+## MANIFEST AND ICON FIXES
+- Added proper icon files
+- Fixed manifest entries
+- Updated CSP to allow icon loading
+
+## DEBUGGING TOOLS
+- Added reset-storage.js script
+- Enabled debug mode in Netlify config
+- Added comprehensive logging
+
+## PERFORMANCE IMPROVEMENTS
+- Fixed audio resource leaks
+- Improved cleanup on component unmount
+- Added proper timeout management
+
+## RECOMMENDATIONS
+
+1. FURTHER IMPROVEMENTS
+- Consider implementing a service worker for better offline support
+- Add more comprehensive error tracking
+- Implement a central state management solution (Redux, Zustand)
+
+2. MONITORING
+- Add real-time error monitoring
+- Implement analytics to track user flows
+- Set up automated testing
+
+3. SECURITY
+- Review CSP settings regularly
+- Implement proper authentication
+- Secure API endpoints
+
+4. PERFORMANCE
+- Optimize bundle size
+- Implement code splitting
+- Use React.memo for expensive components
+
+## EMERGENCY RESET INSTRUCTIONS
+
+If the application gets stuck:
+
+1. Open browser console (F12 or Ctrl+Shift+I)
+2. Run the following command:
+
+```javascript
+console.log('🧠 SYSTEM CLEAR INITIATED');
+localStorage.clear();
+sessionStorage.clear();
+window.location.href = '/';
+```
+
+3. Alternatively, click the "🔄 Сбросить данные" button in the bottom right corner
+
+## CONCLUSION
+
+The main issues were related to navigation loops, storage management, and resource cleanup. The fixes implemented should resolve these issues and provide better error recovery mechanisms.
+
+The application should now navigate properly without getting stuck in the portal screen, and users have multiple ways to recover if any issues occur.

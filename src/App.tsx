@@ -52,7 +52,7 @@ function App() {
       }, 500);
     }
     
-    // CRITICAL: Clear any portal state to prevent navigation loops
+    // CRITICAL: Clear any portal state to prevent loops
     const isPortalScreen = localStorage.getItem('neuropul_current_screen') === 'portal';
     if (isPortalScreen) {
       console.log('🔄 Detected portal screen in storage, clearing to prevent loops');

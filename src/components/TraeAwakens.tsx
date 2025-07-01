@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Brain, ArrowRight, Zap, Skull, PenIcon as AlienIcon } from 'lucide-react';
 import { logError } from '../lib/utils/errorLogger';
-import { getUserLanguage, setUserLanguage } from '../lib/utils/i18n';
+import { getUserLanguage, setUserLanguage, translate } from '../lib/utils/i18n';
+import LanguageSwitcher from './LanguageSwitcher';
 import { playSound, vibrate, cleanupAudio } from '../utils/audioUtils';
 import { saveUserProgress, loadUserProgress, updateUserProgress } from '../utils/progressUtils';
 
@@ -19,10 +20,11 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
   const [language, setLanguage] = useState<'ru' | 'uz'>(getUserLanguage());
   const [isNavigating, setIsNavigating] = useState(false);
   
-  // Refs for cleanup and preventing stale closures
+  // Refs to prevent stale closures in event handlers
   const isNavigatingRef = useRef(false);
   const languageRef = useRef(language);
   const timeoutRefs = useRef<NodeJS.Timeout[]>([]);
+  const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
   const isMountedRef = useRef(true);
 
   // Update refs when state changes
@@ -101,8 +103,6 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
               const currentXp = userProgress?.xp || 0;
               const newXp = currentXp + 10;
               
-              // Update XP in state and localStorage
-              
               // Update user progress
               if (userProgress) {
                 updateUserProgress({
@@ -142,6 +142,14 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
       return () => {
         clearInterval(typingInterval);
         timeoutRefs.current.forEach(timeout => clearTimeout(timeout));
+        
+        if (inactivityTimerRef.current) {
+          clearTimeout(inactivityTimerRef.current);
+          inactivityTimerRef.current = null;
+        }
+        
+        // Clean up audio resources
+        cleanupAudio();
       };
     } catch (error) {
       if (import.meta.env.MODE !== 'production') {
@@ -165,12 +173,14 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
   const handlePathSelect = (path: 'lost' | 'awakening' | 'ready') => {
     try {
       if (isNavigatingRef.current) {
-        console.log('Navigation already in progress, ignoring');
+        console.log('[TraeAwakens] Navigation already in progress, ignoring path select');
         return;
       }
       
       setIsNavigating(true);
       isNavigatingRef.current = true;
+      
+      console.log(`[TraeAwakens] Path selected: ${path}`);
       
       playSound('click', true);
       vibrate([50, 30, 50], true);
@@ -182,7 +192,7 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
       // Save current screen
       localStorage.setItem('neuropul_current_screen', path);
       
-      // CRITICAL FIX: Use string "true" instead of boolean true
+      // FIXED: Use string "true" instead of boolean true
       localStorage.setItem('hasPassedPortal', 'true');
       
       // Track progress
@@ -205,6 +215,7 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
       // Call onPathSelect with a small delay to ensure state is saved
       const navigationTimeout = setTimeout(() => {
         if (isMountedRef.current) {
+          console.log(`[TraeAwakens] Calling onPathSelect with path: ${path}`);
           onPathSelect(path);
           
           // Reset navigation state after a delay in case the navigation fails
@@ -262,7 +273,7 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
         localStorage.setItem('neuropul_user_path', detectedPath);
         localStorage.setItem('neuropul_current_screen', detectedPath);
         
-        // CRITICAL FIX: Use string "true" instead of boolean true
+        // FIXED: Use string "true" instead of boolean true
         localStorage.setItem('hasPassedPortal', 'true');
         
         // Initialize or update user progress
@@ -297,9 +308,10 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
         // Call onPathSelect with a small delay
         const navigationTimeout = setTimeout(() => {
           if (isMountedRef.current) {
+            console.log(`[TraeAwakens] Calling onPathSelect with detected path: ${detectedPath}`);
             onPathSelect(detectedPath);
             
-            // Reset navigation state after a delay
+            // Reset navigation state after a delay in case the navigation fails
             const resetTimeout = setTimeout(() => {
               if (isMountedRef.current) {
                 setIsNavigating(false);
@@ -381,6 +393,10 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
     return () => {
       timeoutRefs.current.forEach(timeout => clearTimeout(timeout));
       
+      if (inactivityTimerRef.current) {
+        clearTimeout(inactivityTimerRef.current);
+      }
+      
       // Clean up audio resources
       cleanupAudio();
     };
@@ -406,17 +422,7 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
       
       {/* Language switcher */}
       <div className="absolute top-4 right-4 z-20">
-        <button 
-          onClick={() => {
-            const newLang = language === 'ru' ? 'uz' : 'ru';
-            handleLanguageChange(newLang);
-          }}
-          className="bg-black bg-opacity-50 text-white px-4 py-2 rounded-lg text-sm hover:bg-opacity-70 transition-colors focus-ring"
-          aria-label={language === 'ru' ? 'Переключить на узбекский' : 'Rus tiliga o\'tish'}
-          disabled={isNavigating}
-        >
-          {language === 'ru' ? 'O\'zbekcha' : 'Русский'}
-        </button>
+        <LanguageSwitcher onLanguageChange={handleLanguageChange} />
       </div>
       
       <div className="relative z-10 max-w-3xl w-full">

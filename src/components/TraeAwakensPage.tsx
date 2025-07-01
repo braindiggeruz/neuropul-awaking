@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import TraeAwakens from '../components/TraeAwakens';
 import ResponseLostSoul from '../components/ResponseLostSoul';
 import ResponseAwakening from '../components/ResponseAwakening';
@@ -9,7 +9,6 @@ import { saveUserProgress, loadUserProgress, updateUserProgress } from '../utils
 import { logError } from '../lib/utils/errorLogger';
 import { cleanupAudio } from '../utils/audioUtils';
 import EmergencyResetButton from '../components/EmergencyResetButton';
-import { debounce } from '../utils/navigationUtils';
 
 type Screen = 'intro' | 'lost' | 'awakening' | 'ready' | 'portal';
 
@@ -18,10 +17,7 @@ const TraeAwakensPage: React.FC = () => {
   const [userPath, setUserPath] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<string>('');
   const [viewCount, setViewCount] = useState(0);
-  const [isNavigating, setIsNavigating] = useState(false);
-  
   const navigate = useNavigate();
-  const location = useLocation();
   
   // Refs for cleanup and navigation control
   const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -31,12 +27,11 @@ const TraeAwakensPage: React.FC = () => {
   const navigationAttemptRef = useRef<number>(0);
   const hasNavigatedRef = useRef<boolean>(false);
   const portalTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const initializedRef = useRef<boolean>(false);
 
   // Initialize session and tracking
   useEffect(() => {
     try {
-      console.log('[TraeAwakensPage] Component mounted, pathname:', location.pathname);
+      console.log('[TraeAwakensPage] Component mounted');
       
       // CRITICAL: Clear any portal-related storage to prevent loops
       localStorage.removeItem('neuropul_current_screen');
@@ -105,7 +100,6 @@ const TraeAwakensPage: React.FC = () => {
       
       // Set mounted flag
       isMountedRef.current = true;
-      initializedRef.current = true;
       
       // Add emergency escape hatch for portal screen
       if (currentScreen === 'portal') {
@@ -121,8 +115,13 @@ const TraeAwakensPage: React.FC = () => {
           timeoutRefs.current.push(portalTimeoutRef.current);
         }
       }
+
+      // Log current path for debugging
+      console.log("[NAV] Current path:", window.location.pathname);
     } catch (error) {
-      console.error('[TraeAwakensPage] Error initializing session:', error);
+      if (import.meta.env.MODE !== 'production') {
+        console.error('[TraeAwakensPage] Error initializing session:', error);
+      }
       logError(error, {
         component: 'TraeAwakensPage',
         action: 'initialize'
@@ -151,10 +150,10 @@ const TraeAwakensPage: React.FC = () => {
       // Clean up audio
       cleanupAudio();
     };
-  }, [location.pathname]);
+  }, []);
 
-  // Force navigation to home with debounce
-  const forceNavigateToHome = debounce(() => {
+  // Force navigation to home
+  const forceNavigateToHome = () => {
     try {
       console.log('[TraeAwakensPage] Force navigation triggered - current screen:', currentScreen);
       navigationAttemptRef.current += 1;
@@ -166,7 +165,7 @@ const TraeAwakensPage: React.FC = () => {
       localStorage.removeItem('neuropul_navigation_in_progress');
       localStorage.removeItem('hasPassedPortal');
       
-      // If too many attempts, use direct location change
+      // If we've tried navigate too many times, use direct location change
       if (navigationAttemptRef.current > 2 && !hasNavigatedRef.current) {
         console.log('[TraeAwakensPage] Too many navigation attempts, using direct location change');
         window.location.href = '/';
@@ -187,7 +186,7 @@ const TraeAwakensPage: React.FC = () => {
       // Last resort - direct location change
       window.location.href = '/';
     }
-  }, 300);
+  };
 
   const handlePathSelect = (path: 'lost' | 'awakening' | 'ready') => {
     // Prevent multiple navigation attempts
@@ -196,7 +195,6 @@ const TraeAwakensPage: React.FC = () => {
       return;
     }
     
-    setIsNavigating(true);
     isNavigatingRef.current = true;
     
     try {
@@ -225,21 +223,21 @@ const TraeAwakensPage: React.FC = () => {
       // Reset navigation lock after a delay
       const resetTimeout = setTimeout(() => {
         if (isMountedRef.current) {
-          setIsNavigating(false);
           isNavigatingRef.current = false;
         }
       }, 500);
       
       timeoutRefs.current.push(resetTimeout);
     } catch (error) {
-      console.error('[TraeAwakensPage] Error in handlePathSelect:', error);
+      if (import.meta.env.MODE !== 'production') {
+        console.error('[TraeAwakensPage] Error in handlePathSelect:', error);
+      }
       logError(error, {
         component: 'TraeAwakensPage',
         action: 'handlePathSelect'
       });
       
       // Reset navigation lock
-      setIsNavigating(false);
       isNavigatingRef.current = false;
     }
   };
@@ -251,7 +249,6 @@ const TraeAwakensPage: React.FC = () => {
       return;
     }
     
-    setIsNavigating(true);
     isNavigatingRef.current = true;
     
     try {
@@ -269,21 +266,21 @@ const TraeAwakensPage: React.FC = () => {
       // Reset navigation lock after a delay
       const resetTimeout = setTimeout(() => {
         if (isMountedRef.current) {
-          setIsNavigating(false);
           isNavigatingRef.current = false;
         }
       }, 500);
       
       timeoutRefs.current.push(resetTimeout);
     } catch (error) {
-      console.error('[TraeAwakensPage] Error in handleBack:', error);
+      if (import.meta.env.MODE !== 'production') {
+        console.error('[TraeAwakensPage] Error in handleBack:', error);
+      }
       logError(error, {
         component: 'TraeAwakensPage',
         action: 'handleBack'
       });
       
       // Reset navigation lock
-      setIsNavigating(false);
       isNavigatingRef.current = false;
     }
   };
@@ -295,7 +292,6 @@ const TraeAwakensPage: React.FC = () => {
       return;
     }
     
-    setIsNavigating(true);
     isNavigatingRef.current = true;
     localStorage.setItem('neuropul_navigation_in_progress', 'true');
     
@@ -310,7 +306,7 @@ const TraeAwakensPage: React.FC = () => {
       // Set completion flag - FIXED: Use string "true" instead of boolean true
       localStorage.setItem('neuropul_intro_completed', 'true');
       localStorage.setItem('neuropul_intro_completed_at', new Date().toISOString());
-      localStorage.setItem('hasPassedPortal', 'true'); // FIXED: Use string "true" instead of boolean true
+      localStorage.setItem('hasPassedPortal', 'true');
       
       // Update user progress
       updateUserProgress({
@@ -351,14 +347,15 @@ const TraeAwakensPage: React.FC = () => {
       
       timeoutRefs.current.push(redirectTimeout);
     } catch (error) {
-      console.error('[TraeAwakensPage] Error in handleContinueToPortal:', error);
+      if (import.meta.env.MODE !== 'production') {
+        console.error('[TraeAwakensPage] Error in handleContinueToPortal:', error);
+      }
       logError(error, {
         component: 'TraeAwakensPage',
         action: 'handleContinueToPortal'
       });
       
       // Reset navigation lock
-      setIsNavigating(false);
       isNavigatingRef.current = false;
       localStorage.removeItem('neuropul_navigation_in_progress');
       
@@ -443,19 +440,6 @@ const TraeAwakensPage: React.FC = () => {
       }
     };
   }, [currentScreen]);
-
-  // Check if we need to navigate away from this page
-  useEffect(() => {
-    if (!initializedRef.current) return;
-    
-    const hasPassedPortal = localStorage.getItem('hasPassedPortal') === 'true';
-    console.log('[TraeAwakensPage] Checking navigation state, hasPassedPortal:', hasPassedPortal);
-    
-    if (hasPassedPortal && location.pathname === '/') {
-      console.log('[TraeAwakensPage] Portal passed, navigating to dashboard');
-      navigate('/dashboard', { replace: true });
-    }
-  }, [navigate, location.pathname]);
 
   // Manual escape button handler
   const handleManualEscape = () => {

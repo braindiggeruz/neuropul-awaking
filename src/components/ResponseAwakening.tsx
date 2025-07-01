@@ -6,6 +6,7 @@ import { getUserLanguage, translate } from '../lib/utils/i18n';
 import LanguageSwitcher from './LanguageSwitcher';
 import { saveUserProgress, loadUserProgress, updateUserProgress, addUserXP } from '../utils/progressUtils';
 import { playSound, vibrate } from '../utils/sounds';
+import { navigateSafely } from '../utils/navigationUtils';
 
 interface ResponseAwakeningProps {
   onContinue: () => void;
@@ -20,18 +21,17 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
   const [userName, setUserName] = useState('');
   const [xp, setXp] = useState(0);
   const [language, setLanguage] = useState<'ru' | 'uz'>(getUserLanguage());
-  const [isNavigating, setIsNavigating] = useState(false);
   
-  // Refs to prevent stale closures in event handlers
-  const isNavigatingRef = useRef(false);
-  const languageRef = useRef(language);
+  // Refs to prevent multiple executions
+  const printedOnceRef = useRef(false);
+  const hasRenderedRef = useRef(false);
   const timeoutRefs = useRef<NodeJS.Timeout[]>([]);
+  const languageRef = useRef(language);
 
   // Update refs when state changes
   useEffect(() => {
-    isNavigatingRef.current = isNavigating;
     languageRef.current = language;
-  }, [isNavigating, language]);
+  }, [language]);
 
   // Load language preference
   useEffect(() => {
@@ -57,6 +57,10 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
 
   // Simulate typing effect
   useEffect(() => {
+    // Guard against multiple executions
+    if (printedOnceRef.current) return;
+    printedOnceRef.current = true;
+    
     let typingInterval: NodeJS.Timeout;
     
     try {
@@ -157,14 +161,7 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
 
   const handleContinue = () => {
     try {
-      if (isNavigatingRef.current) {
-        console.log('Navigation already in progress, ignoring');
-        return;
-      }
-      
       console.log('Continue button clicked');
-      setIsNavigating(true);
-      isNavigatingRef.current = true;
       
       playSound('click', true);
       vibrate([50, 30, 50], true);
@@ -195,43 +192,20 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
         lastActive: new Date().toISOString()
       });
       
-      // Call onContinue with a small delay
-      const continueTimeout = setTimeout(() => {
-        onContinue();
-        
-        // Reset navigation state after a delay in case the navigation fails
-        const resetTimeout = setTimeout(() => {
-          setIsNavigating(false);
-          isNavigatingRef.current = false;
-        }, 1000);
-        
-        timeoutRefs.current.push(resetTimeout);
-      }, 300);
-      
-      timeoutRefs.current.push(continueTimeout);
+      // Call onContinue
+      onContinue();
     } catch (error) {
       console.error('Error in handleContinue:', error);
       logError(error, {
         component: 'ResponseAwakening',
         action: 'handleContinue'
       });
-      
-      // Reset navigation state
-      setIsNavigating(false);
-      isNavigatingRef.current = false;
     }
   };
 
   const handleBack = () => {
     try {
-      if (isNavigatingRef.current) {
-        console.log('Navigation already in progress, ignoring');
-        return;
-      }
-      
       console.log('Back button clicked');
-      setIsNavigating(true);
-      isNavigatingRef.current = true;
       
       playSound('click', true);
       vibrate([30], true);
@@ -245,30 +219,14 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
         lastActive: new Date().toISOString()
       });
       
-      // Call onBack with a small delay
-      const backTimeout = setTimeout(() => {
-        onBack();
-        
-        // Reset navigation state after a delay in case the navigation fails
-        const resetTimeout = setTimeout(() => {
-          setIsNavigating(false);
-          isNavigatingRef.current = false;
-        }, 1000);
-        
-        timeoutRefs.current.push(resetTimeout);
-      }, 300);
-      
-      timeoutRefs.current.push(backTimeout);
+      // Call onBack
+      onBack();
     } catch (error) {
       console.error('Error in handleBack:', error);
       logError(error, {
         component: 'ResponseAwakening',
         action: 'handleBack'
       });
-      
-      // Reset navigation state
-      setIsNavigating(false);
-      isNavigatingRef.current = false;
     }
   };
 
@@ -316,6 +274,9 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
       setIsTyping(true);
       setMessage('');
       setShowContinue(false);
+      
+      // Reset printed flag to allow retyping
+      printedOnceRef.current = false;
       
       // Restart typing effect with new language
       const traeMessage = getTraeMessage();
@@ -468,7 +429,6 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
                     onClick={() => setShowNameInput(true)}
                     className="text-cyan-400 hover:text-cyan-300 transition-colors text-sm"
                     aria-label={language === 'ru' ? 'Как мне к тебе обращаться?' : 'Sizga qanday murojaat qilishim kerak?'}
-                    disabled={isNavigating}
                   >
                     {language === 'ru' 
                       ? 'Как мне к тебе обращаться?' 
@@ -492,13 +452,11 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
                     onKeyPress={(e) => e.key === 'Enter' && handleNameSubmit()}
                     autoFocus
                     aria-label={language === 'ru' ? 'Ваше имя' : 'Ismingiz'}
-                    disabled={isNavigating}
                   />
                   <button
                     onClick={handleNameSubmit}
                     className="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg transition-colors"
                     aria-label={language === 'ru' ? 'Сохранить' : 'Saqlash'}
-                    disabled={isNavigating}
                   >
                     {language === 'ru' ? 'Сохранить' : 'Saqlash'}
                   </button>
@@ -507,7 +465,7 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
               
               {/* Awakening Journey with enhanced visual style */}
               <AnimatePresence>
-                {showContinue && (
+                {showContinue && !hasRenderedRef.current && (
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -568,6 +526,7 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
                         </motion.div>
                       </div>
                     </div>
+                    {hasRenderedRef.current = true}
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -605,7 +564,6 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
                       onMouseEnter={() => playSound('hover', true)}
                       className="px-6 py-3 bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white rounded-lg transition-colors flex items-center justify-center space-x-2 border border-gray-700 hover:border-purple-500 group relative overflow-hidden"
                       aria-label={translate('back', language)}
-                      disabled={isNavigating}
                     >
                       {/* Button hover effect */}
                       <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-blue-600 opacity-0 group-hover:opacity-10 transition-opacity"></div>
@@ -619,7 +577,6 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
                       onMouseEnter={() => playSound('hover', true)}
                       className="flex-1 px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-lg transition-colors flex items-center justify-center space-x-2 relative overflow-hidden group"
                       aria-label={translate('startAwakening', language)}
-                      disabled={isNavigating}
                       id="start-awakening-button"
                       data-testid="start-awakening-button"
                     >
@@ -634,21 +591,6 @@ const ResponseAwakening: React.FC<ResponseAwakeningProps> = ({ onContinue, onBac
                   </motion.div>
                 )}
               </AnimatePresence>
-              
-              {/* Loading indicator */}
-              {isNavigating && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="mt-6 flex justify-center"
-                >
-                  <div className="flex items-center space-x-3">
-                    <div className="w-4 h-4 bg-purple-600 rounded-full animate-pulse"></div>
-                    <div className="w-4 h-4 bg-blue-600 rounded-full animate-pulse" style={{ animationDelay: '0.3s' }}></div>
-                    <div className="w-4 h-4 bg-cyan-600 rounded-full animate-pulse" style={{ animationDelay: '0.6s' }}></div>
-                  </div>
-                </motion.div>
-              )}
               
               {/* Cyberpunk decorative elements with enhanced effects */}
               <div className="absolute -bottom-3 -right-3 w-24 h-24 border-r-2 border-b-2 border-cyan-500 opacity-50 animate-pulse"></div>

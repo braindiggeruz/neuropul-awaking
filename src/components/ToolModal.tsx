@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Loader2, Copy, Download, RefreshCw, Lightbulb, Wand2, Star, Zap, Eye, BookOpen } from 'lucide-react';
 import { AITool } from '../types';
@@ -37,6 +37,9 @@ const ToolModal: React.FC<ToolModalProps> = ({
   const [generationHistory, setGenerationHistory] = useState<Array<{prompt: string, result: string, imageUrl?: string, rating?: number}>>([]);
   const [currentRating, setCurrentRating] = useState(0);
   const [showAdvancedMode, setShowAdvancedMode] = useState(false);
+  
+  // Ref to prevent multiple AI calls
+  const hasCompletedAIRef = useRef(false);
 
   // Сброс состояния при открытии модалки
   useEffect(() => {
@@ -51,6 +54,7 @@ const ToolModal: React.FC<ToolModalProps> = ({
       setShowPromptHelper(false);
       setMentorTip('');
       setCurrentRating(0);
+      hasCompletedAIRef.current = false;
       
       // Загружаем подсказки для визуальных инструментов
       if (tool.id === 'meme-generator' || tool.id === 'image-analyzer') {
@@ -114,6 +118,8 @@ const ToolModal: React.FC<ToolModalProps> = ({
   const handleClose = () => {
     console.log(`[ToolModal] Closing enhanced tool: ${tool.id}`);
     playSound('click', soundEnabled);
+    // Reset AI state
+    hasCompletedAIRef.current = false;
     onClose();
   };
 
@@ -124,6 +130,10 @@ const ToolModal: React.FC<ToolModalProps> = ({
       playSound('error', soundEnabled);
       return;
     }
+    
+    // Guard against multiple calls
+    if (hasCompletedAIRef.current) return;
+    hasCompletedAIRef.current = true;
 
     console.log(`[ToolModal] Using enhanced tool ${tool.id} with input: "${input}"`);
     
@@ -199,6 +209,8 @@ const ToolModal: React.FC<ToolModalProps> = ({
       setMentorTip('🔧 Не переживайте! Попробуйте переформулировать запрос или использовать наши подсказки.');
       playSound('error', soundEnabled);
       vibrate([200], vibrationEnabled);
+      // Reset AI completion flag to allow retry
+      hasCompletedAIRef.current = false;
     } finally {
       setIsLoading(false);
     }
@@ -233,6 +245,8 @@ const ToolModal: React.FC<ToolModalProps> = ({
   const handleRegenerate = () => {
     if (input.trim()) {
       setMentorTip('🔄 Генерируем заново! Каждый раз результат может быть разным.');
+      // Reset AI completion flag to allow regeneration
+      hasCompletedAIRef.current = false;
       handleUseTools();
     }
   };
@@ -255,6 +269,11 @@ const ToolModal: React.FC<ToolModalProps> = ({
     setInput(suggestion);
     setMentorTip('✨ Отличный выбор! Этот промпт даст хороший результат.');
     playSound('click', soundEnabled);
+  };
+
+  // Reset AI state
+  const resetAI = () => {
+    hasCompletedAIRef.current = false;
   };
 
   if (!isOpen) return null;

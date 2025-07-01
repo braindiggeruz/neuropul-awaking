@@ -4,6 +4,7 @@ import { Brain, ArrowRight, Code, Zap, Terminal, Lock } from 'lucide-react';
 import { logError } from '../lib/utils/errorLogger';
 import { getUserLanguage, setUserLanguage } from '../lib/utils/i18n';
 import { playSound, vibrate, cleanupAudio } from '../utils/audioUtils';
+import { navigateSafely } from '../utils/navigationUtils';
 
 interface ResponseHackerReadyProps {
   onContinue: () => void;
@@ -19,16 +20,17 @@ const ResponseHackerReady: React.FC<ResponseHackerReadyProps> = ({ onContinue, o
   const [xp, setXp] = useState(0);
   const [isPaid, setIsPaid] = useState(false);
   const [language, setLanguage] = useState<'ru' | 'uz'>(getUserLanguage());
-  const [isNavigating, setIsNavigating] = useState(false);
   
-  // Refs for cleanup and preventing stale closures
-  const isNavigatingRef = useRef(false);
+  // Refs for preventing multiple executions
+  const printedOnceRef = useRef(false);
+  const hasRenderedRef = useRef(false);
   const timeoutRefs = useRef<NodeJS.Timeout[]>([]);
+  const languageRef = useRef(language);
 
   // Update refs when state changes
   useEffect(() => {
-    isNavigatingRef.current = isNavigating;
-  }, [isNavigating]);
+    languageRef.current = language;
+  }, [language]);
 
   // Load language preference
   useEffect(() => {
@@ -70,6 +72,10 @@ const ResponseHackerReady: React.FC<ResponseHackerReadyProps> = ({ onContinue, o
 
   // Simulate typing effect
   useEffect(() => {
+    // Guard against multiple executions
+    if (printedOnceRef.current) return;
+    printedOnceRef.current = true;
+    
     let typingInterval: NodeJS.Timeout;
     
     try {
@@ -141,14 +147,7 @@ const ResponseHackerReady: React.FC<ResponseHackerReadyProps> = ({ onContinue, o
 
   const handleContinue = () => {
     try {
-      if (isNavigatingRef.current) {
-        console.log('Navigation already in progress, ignoring');
-        return;
-      }
-      
       console.log('Continue button clicked');
-      setIsNavigating(true);
-      isNavigatingRef.current = true;
       
       playSound('click', true);
       vibrate([50, 30, 50], true);
@@ -170,71 +169,32 @@ const ResponseHackerReady: React.FC<ResponseHackerReadyProps> = ({ onContinue, o
       // Set flag for advanced tools
       localStorage.setItem('neuropul_advanced_tools_unlocked', 'true');
       
-      // Call onContinue with a small delay
-      const continueTimeout = setTimeout(() => {
-        onContinue();
-        
-        // Reset navigation state after a delay
-        const resetTimeout = setTimeout(() => {
-          setIsNavigating(false);
-          isNavigatingRef.current = false;
-        }, 1000);
-        
-        timeoutRefs.current.push(resetTimeout);
-      }, 300);
-      
-      timeoutRefs.current.push(continueTimeout);
+      // Call onContinue
+      onContinue();
     } catch (error) {
       console.error('Error in handleContinue:', error);
       logError(error, {
         component: 'ResponseHackerReady',
         action: 'handleContinue'
       });
-      
-      // Reset navigation state
-      setIsNavigating(false);
-      isNavigatingRef.current = false;
     }
   };
 
   const handleBack = () => {
     try {
-      if (isNavigatingRef.current) {
-        console.log('Navigation already in progress, ignoring');
-        return;
-      }
-      
       console.log('Back button clicked');
-      setIsNavigating(true);
-      isNavigatingRef.current = true;
       
       playSound('click', true);
       vibrate([30], true);
       
-      // Call onBack with a small delay
-      const backTimeout = setTimeout(() => {
-        onBack();
-        
-        // Reset navigation state after a delay
-        const resetTimeout = setTimeout(() => {
-          setIsNavigating(false);
-          isNavigatingRef.current = false;
-        }, 1000);
-        
-        timeoutRefs.current.push(resetTimeout);
-      }, 300);
-      
-      timeoutRefs.current.push(backTimeout);
+      // Call onBack
+      onBack();
     } catch (error) {
       console.error('Error in handleBack:', error);
       logError(error, {
         component: 'ResponseHackerReady',
         action: 'handleBack'
       });
-      
-      // Reset navigation state
-      setIsNavigating(false);
-      isNavigatingRef.current = false;
     }
   };
 
@@ -334,7 +294,6 @@ const ResponseHackerReady: React.FC<ResponseHackerReadyProps> = ({ onContinue, o
           }}
           className="bg-black bg-opacity-50 text-white px-4 py-2 rounded-lg text-sm hover:bg-opacity-70 transition-colors focus-ring"
           aria-label={language === 'ru' ? 'Переключить на узбекский' : 'Rus tiliga o\'tish'}
-          disabled={isNavigating}
         >
           {language === 'ru' ? 'O\'zbekcha' : 'Русский'}
         </button>
@@ -400,7 +359,6 @@ const ResponseHackerReady: React.FC<ResponseHackerReadyProps> = ({ onContinue, o
                     onClick={() => setShowNameInput(true)}
                     className="text-cyan-400 hover:text-cyan-300 transition-colors text-sm focus-ring"
                     aria-label={language === 'ru' ? 'Как мне к тебе обращаться, хакер?' : 'Sizga qanday murojaat qilishim kerak, xaker?'}
-                    disabled={isNavigating}
                   >
                     {language === 'ru' 
                       ? 'Как мне к тебе обращаться, хакер?' 
@@ -426,13 +384,11 @@ const ResponseHackerReady: React.FC<ResponseHackerReadyProps> = ({ onContinue, o
                     onKeyPress={(e) => e.key === 'Enter' && handleNameSubmit()}
                     autoFocus
                     aria-label={language === 'ru' ? 'Ваше имя или хендл' : 'Ismingiz yoki taxallusingiz'}
-                    disabled={isNavigating}
                   />
                   <button
                     onClick={handleNameSubmit}
                     className="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg transition-colors focus-ring"
                     aria-label={language === 'ru' ? 'Сохранить' : 'Saqlash'}
-                    disabled={isNavigating}
                   >
                     {language === 'ru' ? 'Сохранить' : 'Saqlash'}
                   </button>
@@ -441,7 +397,7 @@ const ResponseHackerReady: React.FC<ResponseHackerReadyProps> = ({ onContinue, o
               
               {/* Advanced Tools with enhanced visual style */}
               <AnimatePresence>
-                {showContinue && (
+                {showContinue && !hasRenderedRef.current && (
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -551,6 +507,7 @@ const ResponseHackerReady: React.FC<ResponseHackerReadyProps> = ({ onContinue, o
                         </p>
                       </motion.div>
                     </div>
+                    {hasRenderedRef.current = true}
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -588,7 +545,6 @@ const ResponseHackerReady: React.FC<ResponseHackerReadyProps> = ({ onContinue, o
                       onMouseEnter={() => playSound('hover', true)}
                       className="px-6 py-3 bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white rounded-lg transition-colors flex items-center justify-center space-x-2 border border-gray-700 hover:border-purple-500 group relative overflow-hidden focus-ring"
                       aria-label={language === 'ru' ? 'Назад' : 'Orqaga'}
-                      disabled={isNavigating}
                     >
                       {/* Button hover effect */}
                       <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-blue-600 opacity-0 group-hover:opacity-10 transition-opacity"></div>
@@ -602,7 +558,6 @@ const ResponseHackerReady: React.FC<ResponseHackerReadyProps> = ({ onContinue, o
                       onMouseEnter={() => playSound('hover', true)}
                       className="flex-1 px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-lg transition-colors flex items-center justify-center space-x-2 relative overflow-hidden group focus-ring"
                       aria-label={language === 'ru' ? 'Перейти к инструментам' : 'Vositalarga o\'tish'}
-                      disabled={isNavigating}
                     >
                       {/* Button glow effect */}
                       <div className="absolute -inset-1 bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg blur opacity-30 group-hover:opacity-50 transition-opacity"></div>
@@ -617,21 +572,6 @@ const ResponseHackerReady: React.FC<ResponseHackerReadyProps> = ({ onContinue, o
                   </motion.div>
                 )}
               </AnimatePresence>
-              
-              {/* Loading indicator */}
-              {isNavigating && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="mt-6 flex justify-center"
-                >
-                  <div className="flex items-center space-x-3">
-                    <div className="w-4 h-4 bg-purple-600 rounded-full animate-pulse"></div>
-                    <div className="w-4 h-4 bg-blue-600 rounded-full animate-pulse" style={{ animationDelay: '0.3s' }}></div>
-                    <div className="w-4 h-4 bg-cyan-600 rounded-full animate-pulse" style={{ animationDelay: '0.6s' }}></div>
-                  </div>
-                </motion.div>
-              )}
               
               {/* CTA for premium */}
               {showContinue && !isPaid && (
@@ -663,7 +603,6 @@ const ResponseHackerReady: React.FC<ResponseHackerReadyProps> = ({ onContinue, o
                         }}
                         className="text-sm bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-500 hover:to-orange-500 text-white px-4 py-2 rounded-lg transition-colors inline-flex items-center space-x-2 focus-ring"
                         aria-label={language === 'ru' ? 'Узнать больше' : 'Ko\'proq bilish'}
-                        disabled={isNavigating}
                       >
                         <Zap className="w-4 h-4" />
                         <span>

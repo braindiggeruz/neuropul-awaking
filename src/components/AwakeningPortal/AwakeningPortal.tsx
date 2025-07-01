@@ -1,6 +1,6 @@
-import React, { useReducer, useState, useEffect } from 'react';
+import React, { useReducer, useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Brain, Zap, FileText, ArrowRight } from 'lucide-react';
+import { Brain, ArrowRight, Zap, FileText } from 'lucide-react';
 import Quiz from './Quiz';
 import ArchetypeAnalysis from './ArchetypeAnalysis';
 import Prophecy from './Prophecy';
@@ -124,6 +124,10 @@ const AwakeningPortal: React.FC<AwakeningPortalProps> = ({ onComplete }) => {
   const [debugInfo, setDebugInfo] = useState<string[]>([]);
   const [pdfGenerationAttempted, setPdfGenerationAttempted] = useState(false);
   const { saveProgress } = useStorage();
+  
+  // Refs to prevent multiple AI calls
+  const hasArchetypeFetchedRef = useRef(false);
+  const hasProphecyFetchedRef = useRef(false);
 
   // 🔍 GOD LEVEL DEBUG: Enhanced logging system
   const addDebugLog = (message: string, level: 'INFO' | 'WARN' | 'ERROR' | 'SUCCESS' = 'INFO') => {
@@ -227,7 +231,13 @@ const AwakeningPortal: React.FC<AwakeningPortalProps> = ({ onComplete }) => {
   }, [state.quiz.completed, state.step]);
 
   // 🔍 GOD LEVEL DEBUG: Bulletproof archetype analysis
-  const analyzeArchetype = async () => {
+  const analyzeArchetype = useCallback(async () => {
+    // Guard against multiple calls
+    if (hasArchetypeFetchedRef.current) {
+      addDebugLog('🛡️ Archetype analysis already performed, skipping', 'INFO');
+      return;
+    }
+    
     addDebugLog('🔮 Starting enhanced archetype analysis', 'INFO');
     dispatch({ type: 'SET_LOADING', payload: true });
     dispatch({ type: 'SET_ERROR', payload: null });
@@ -292,6 +302,9 @@ const AwakeningPortal: React.FC<AwakeningPortalProps> = ({ onComplete }) => {
           playSound('mystical');
           vibrate([100, 50, 100]);
           
+          // Mark as fetched
+          hasArchetypeFetchedRef.current = true;
+          
           setTimeout(() => {
             addDebugLog('🔮 Moving to prophecy step', 'INFO');
             dispatch({ type: 'SET_STEP', payload: 'prophecy' });
@@ -341,6 +354,9 @@ const AwakeningPortal: React.FC<AwakeningPortalProps> = ({ onComplete }) => {
         playSound('mystical');
         vibrate([100, 50, 100]);
         
+        // Mark as fetched
+        hasArchetypeFetchedRef.current = true;
+        
         setTimeout(() => {
           dispatch({ type: 'SET_STEP', payload: 'prophecy' });
           generateProphecy(fallbackArchetype.type);
@@ -354,10 +370,16 @@ const AwakeningPortal: React.FC<AwakeningPortalProps> = ({ onComplete }) => {
     } finally {
       dispatch({ type: 'SET_LOADING', payload: false });
     }
-  };
+  }, [state.quiz.answers, state.retryCount]);
 
   // 🔍 GOD LEVEL DEBUG: Enhanced prophecy generation
-  const generateProphecy = async (archetype: string) => {
+  const generateProphecy = useCallback(async (archetype: string) => {
+    // Guard against multiple calls
+    if (hasProphecyFetchedRef.current) {
+      addDebugLog('🛡️ Prophecy already generated, skipping', 'INFO');
+      return;
+    }
+    
     addDebugLog(`🔮 Generating prophecy for: ${archetype}`, 'INFO');
     dispatch({ type: 'SET_LOADING', payload: true });
     
@@ -375,6 +397,9 @@ const AwakeningPortal: React.FC<AwakeningPortalProps> = ({ onComplete }) => {
           addDebugLog(`✅ Prophecy generated: "${response.data}"`, 'SUCCESS');
           dispatch({ type: 'SET_PROPHECY', payload: response.data });
         }
+        
+        // Mark as fetched
+        hasProphecyFetchedRef.current = true;
         
         playSound('mystical');
         
@@ -402,13 +427,16 @@ const AwakeningPortal: React.FC<AwakeningPortalProps> = ({ onComplete }) => {
       addDebugLog(`🔄 Using fallback prophecy: "${prophecy}"`, 'WARN');
       dispatch({ type: 'SET_PROPHECY', payload: prophecy });
       
+      // Mark as fetched
+      hasProphecyFetchedRef.current = true;
+      
       setTimeout(() => {
         dispatch({ type: 'SET_STEP', payload: 'avatar' });
       }, 4000);
     } finally {
       dispatch({ type: 'SET_LOADING', payload: false });
     }
-  };
+  }, []);
 
   // 🔍 GOD LEVEL DEBUG: Enhanced name validation
   const handleNameSet = (name: string) => {
@@ -602,6 +630,10 @@ const AwakeningPortal: React.FC<AwakeningPortalProps> = ({ onComplete }) => {
     setPdfUrl(null);
     setPdfGenerationAttempted(false);
     setDebugInfo([]);
+    
+    // Reset AI fetch flags
+    hasArchetypeFetchedRef.current = false;
+    hasProphecyFetchedRef.current = false;
     
     // Clear localStorage flags for a complete reset
     localStorage.removeItem('neuropul_awakening_completed');
@@ -1015,6 +1047,8 @@ const AwakeningPortal: React.FC<AwakeningPortalProps> = ({ onComplete }) => {
                 <div>🖼️ Avatar: <span className="text-pink-400">{state.avatarUrl ? 'set' : 'none'}</span></div>
                 <div>📄 PDF: <span className="text-green-400">{pdfUrl ? 'ready' : 'none'}</span></div>
                 <div>📄 PDF Attempted: <span className="text-yellow-400">{pdfGenerationAttempted ? 'yes' : 'no'}</span></div>
+                <div>🛡️ Archetype Fetched: <span className="text-blue-400">{hasArchetypeFetchedRef.current ? 'yes' : 'no'}</span></div>
+                <div>🛡️ Prophecy Fetched: <span className="text-blue-400">{hasProphecyFetchedRef.current ? 'yes' : 'no'}</span></div>
               </div>
               
               <div className="mt-3 border-t border-gray-700 pt-2">

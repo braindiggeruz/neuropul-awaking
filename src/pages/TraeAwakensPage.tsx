@@ -27,17 +27,21 @@ const TraeAwakensPage: React.FC = () => {
   // Initialize session and tracking
   useEffect(() => {
     try {
+      console.log('🔍 TraeAwakensPage mounted');
+      
       // Check if there's a saved path and screen
       const savedPath = localStorage.getItem('neuropul_user_path');
       const savedScreen = localStorage.getItem('neuropul_current_screen');
       
       if (savedPath) {
         setUserPath(savedPath);
+        console.log(`🔍 Saved path found: ${savedPath}`);
         
         // If there's a saved screen that's not 'intro', restore it
         if (savedScreen && savedScreen !== 'intro' && 
             ['lost', 'awakening', 'ready', 'portal'].includes(savedScreen)) {
           setCurrentScreen(savedScreen as Screen);
+          console.log(`🔍 Restoring saved screen: ${savedScreen}`);
         }
       }
       
@@ -131,6 +135,8 @@ const TraeAwakensPage: React.FC = () => {
     isNavigatingRef.current = true;
     
     try {
+      console.log(`🔍 Path selected: ${path}`);
+      
       // Update state
       if (isMountedRef.current) {
         setCurrentScreen(path);
@@ -185,6 +191,8 @@ const TraeAwakensPage: React.FC = () => {
     isNavigatingRef.current = true;
     
     try {
+      console.log('🔍 Going back to intro screen');
+      
       // Update state
       if (isMountedRef.current) {
         setCurrentScreen('intro');
@@ -230,6 +238,8 @@ const TraeAwakensPage: React.FC = () => {
     isNavigatingRef.current = true;
     
     try {
+      console.log('🔍 Continuing to portal');
+      
       // Update state
       if (isMountedRef.current) {
         setCurrentScreen('portal');
@@ -255,15 +265,21 @@ const TraeAwakensPage: React.FC = () => {
         localStorage.setItem('neuropul_show_cta', 'true');
       }
       
+      console.log('🔍 Preparing to navigate to home page');
+      
       // Navigate to home or premium page after a delay
       const redirectTimeout = setTimeout(() => {
         if (isMountedRef.current) {
+          console.log('🔍 Executing navigation');
+          
           // Check if we should show CTA
           if (localStorage.getItem('neuropul_show_cta') === 'true' && localStorage.getItem('neuropul_is_paid') !== 'true') {
             // Navigate to premium page
+            console.log('🔍 Navigating to premium page');
             navigate('/premium', { replace: true });
           } else {
             // Navigate to home page
+            console.log('🔍 Navigating to home page');
             navigate('/', { replace: true });
           }
           
@@ -287,6 +303,7 @@ const TraeAwakensPage: React.FC = () => {
       
       // Fallback navigation
       if (isMountedRef.current) {
+        console.log('🔍 Fallback navigation to home page');
         navigate('/', { replace: true });
       }
     }
@@ -401,6 +418,7 @@ const TraeAwakensPage: React.FC = () => {
             <div className="text-center">
               <div className="w-16 h-16 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
               <p className="text-white text-lg">Переход к порталу пробуждения...</p>
+              <p className="text-gray-400 text-sm mt-2">Пожалуйста, подождите...</p>
             </div>
           </motion.div>
         )}

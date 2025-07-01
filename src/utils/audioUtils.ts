@@ -222,7 +222,7 @@ export const cleanupAudio = (): void => {
     activeNodes.length = 0;
     
     // Close audio context if it exists
-    if (audioContext) {
+    if (audioContext && audioContext.state !== 'closed') {
       audioContext.close().then(() => {
         audioContext = null;
       }).catch(err => {

@@ -18,10 +18,9 @@
       "type": "image/png"
     },
     {
-      "src": "/maskable-icon.png",
+      "src": "https://neuropul.uz/favicon.png",
       "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable"
+      "type": "image/png"
     }
   ],
   "shortcuts": [
@@ -42,17 +41,5 @@
   ],
   "lang": "ru",
   "dir": "ltr",
-  "categories": ["education", "productivity", "utilities"],
-  "screenshots": [
-    {
-      "src": "/screenshot-1.jpg",
-      "sizes": "1280x720",
-      "type": "image/jpeg"
-    },
-    {
-      "src": "/screenshot-2.jpg",
-      "sizes": "1280x720",
-      "type": "image/jpeg"
-    }
-  ]
+  "categories": ["education", "productivity", "utilities"]
 }

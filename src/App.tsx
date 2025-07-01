@@ -36,11 +36,14 @@ function App() {
       // Store the path for potential use after authentication
       sessionStorage.setItem('redirectAfterAuth', redirectPath);
     }
+    
+    // Log app initialization
+    console.log('🚀 App initialized');
   }, []);
 
   return (
     <FocusManager>
-      <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+      <Router>
         <ScrollToTop />
         <TitleManager>
           <Suspense fallback={<LoadingFallback />}>

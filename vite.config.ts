@@ -18,7 +18,10 @@ export default defineConfig(({ mode }) => {
           changeOrigin: true,
         },
       },
-      hmr: mode === 'production' ? false : true,
+      hmr: mode === 'production' ? false : {
+        clientPort: 443,
+        protocol: 'wss'
+      },
     },
     define: {
       // Make env variables available to the client

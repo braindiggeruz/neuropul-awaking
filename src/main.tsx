@@ -12,6 +12,7 @@ setupGlobalErrorHandling();
 // Create a function to handle errors during rendering
 const renderApp = () => {
   try {
+    console.log('🔍 Initializing NeuropulAI application');
     const rootElement = document.getElementById('root');
     if (!rootElement) {
       throw new Error('Root element not found');
@@ -24,6 +25,20 @@ const renderApp = () => {
         <App />
       </StrictMode>
     );
+    
+    // Remove the initial loader once the app has loaded
+    const loader = document.getElementById('initial-loader');
+    if (loader) {
+      loader.style.opacity = '0';
+      loader.style.transition = 'opacity 0.5s ease';
+      setTimeout(() => {
+        if (loader.parentNode) {
+          loader.style.display = 'none';
+        }
+      }, 500);
+    }
+    
+    console.log('✅ NeuropulAI application initialized successfully');
   } catch (error) {
     console.error('Error rendering app:', error);
     

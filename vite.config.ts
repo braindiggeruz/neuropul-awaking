@@ -7,17 +7,7 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   
   return {
-    plugins: [react({
-      // Enable React Router v7 future flags
-      babel: {
-        plugins: [
-          ['module:@babel/plugin-transform-react-jsx', {
-            runtime: 'automatic',
-            importSource: 'react'
-          }]
-        ]
-      }
-    })],
+    plugins: [react()],
     optimizeDeps: {
       exclude: ['lucide-react'],
     },

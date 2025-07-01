@@ -123,7 +123,6 @@ export const forceNavigate = (path: string): void => {
     // Clear any portal state
     localStorage.removeItem('neuropul_current_screen');
     sessionStorage.removeItem('neuropul_current_screen');
-    localStorage.removeItem('hasPassedPortal'); // ADDED: Clear hasPassedPortal flag
     
     // If too many attempts, use direct location change
     if (navigationAttempts > MAX_NAVIGATION_ATTEMPTS) {

@@ -78,8 +78,6 @@ const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({
       tabIndex={0}
       id="language-switcher"
       name="language-switcher"
-      // FIXED: Changed global="true" to global={true}
-      global={true}
     >
       {language === 'ru' ? '🇺🇿 O\'zbekcha' : '🇷🇺 Русский'}
     </motion.button>

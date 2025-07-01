@@ -19,12 +19,13 @@
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <meta http-equiv="X-Content-Type-Options" content="nosniff" />
-    <meta http-equiv="X-Frame-Options" content="DENY" />
+    <meta http-equiv="X-Frame-Options" content="SAMEORIGIN" />
     <meta http-equiv="X-XSS-Protection" content="1; mode=block" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://api.dicebear.com https://*.supabase.co https://*.pexels.com https://media.giphy.com; connect-src 'self' https://*.supabase.co https://api.openai.com;" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://api.dicebear.com https://*.supabase.co https://*.pexels.com https://media.giphy.com https://neuropul.uz; connect-src 'self' https://*.supabase.co https://api.openai.com;" />
     <meta http-equiv="Cross-Origin-Embedder-Policy" content="require-corp" />
     <meta http-equiv="Cross-Origin-Opener-Policy" content="same-origin" />
     <meta http-equiv="Cross-Origin-Resource-Policy" content="same-origin" />
+    <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=(), interest-cohort=()" />
     <style>
       @keyframes slide-in-right {
         from {
@@ -127,17 +128,54 @@
     </noscript>
     
     <script>
+      // CRITICAL FIX: Clear portal screen and navigation flags on page load
+      localStorage.removeItem('neuropul_current_screen');
+      localStorage.removeItem('neuropul_navigation_in_progress');
+      console.log('🧹 Cleared navigation state from HTML script');
+      
       // Remove the initial loader once the app has loaded
       window.addEventListener('load', function() {
         const loader = document.getElementById('initial-loader');
         if (loader) {
+          console.log('Removing initial loader from load event');
           loader.style.opacity = '0';
           loader.style.transition = 'opacity 0.5s ease';
           setTimeout(function() {
-            loader.style.display = 'none';
+            if (loader && loader.parentNode) {
+              loader.parentNode.removeChild(loader);
+              console.log('Initial loader removed from load event');
+            }
           }, 500);
         }
       });
+      
+      // Fallback removal after 5 seconds
+      setTimeout(function() {
+        const loader = document.getElementById('initial-loader');
+        if (loader) {
+          console.log('Removing initial loader from fallback timeout');
+          loader.style.opacity = '0';
+          loader.style.transition = 'opacity 0.5s ease';
+          setTimeout(function() {
+            if (loader && loader.parentNode) {
+              loader.parentNode.removeChild(loader);
+              console.log('Initial loader removed from fallback timeout');
+            }
+          }, 500);
+        }
+      }, 5000);
+      
+      // CRITICAL FIX: Add emergency escape hatch
+      setTimeout(function() {
+        // Check if we're still on the portal screen after 10 seconds
+        if (localStorage.getItem('neuropul_current_screen') === 'portal' || 
+            localStorage.getItem('neuropul_navigation_in_progress') === 'true') {
+          console.log('🚨 EMERGENCY ESCAPE: Still on portal after 10 seconds');
+          localStorage.removeItem('neuropul_current_screen');
+          localStorage.removeItem('neuropul_navigation_in_progress');
+          window.location.href = '/';
+        }
+      }, 10000);
     </script>
   </body>
 </html>

@@ -63,7 +63,7 @@ const renderApp = () => {
     const rootElement = document.getElementById('root');
     if (rootElement) {
       rootElement.innerHTML = `
-        <div style="min-height: 100vh; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); display: flex; align-items: center; justify-content: center; padding: 20px; color: white; font-family: sans-serif;">
+        <div style="min-height: 100vh; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); display: flex; align-items: center; justify-center; padding: 20px; color: white; font-family: sans-serif;">
           <div style="background: rgba(0,0,0,0.5); border-radius: 12px; padding: 24px; max-width: 500px; text-align: center;">
             <div style="font-size: 48px; margin-bottom: 16px;">⚠️</div>
             <h2 style="font-size: 24px; margin-bottom: 16px;">Ошибка запуска приложения</h2>
@@ -83,3 +83,6 @@ const renderApp = () => {
 
 // Call the render function
 renderApp();
+
+// Log completion
+console.log("🚀 main.tsx execution completed");

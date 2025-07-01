@@ -23,11 +23,13 @@ const TraeAwakensPage: React.FC = () => {
   const isNavigatingRef = useRef<boolean>(false);
   const timeoutRefs = useRef<NodeJS.Timeout[]>([]);
   const isMountedRef = useRef<boolean>(true);
+  const navigationAttempts = useRef<number>(0);
 
   // Initialize session and tracking
   useEffect(() => {
     try {
       console.log('🔍 TraeAwakensPage mounted');
+      console.log('🔍 Navigation object available:', !!navigate);
       
       // Check if there's a saved path and screen
       const savedPath = localStorage.getItem('neuropul_user_path');
@@ -127,7 +129,7 @@ const TraeAwakensPage: React.FC = () => {
       // Clean up audio
       cleanupAudio();
     };
-  }, []);
+  }, [navigate]);
 
   const handlePathSelect = (path: 'lost' | 'awakening' | 'ready') => {
     // Prevent multiple navigation attempts
@@ -248,6 +250,7 @@ const TraeAwakensPage: React.FC = () => {
     }
     
     isNavigatingRef.current = true;
+    navigationAttempts.current += 1;
     
     try {
       console.log('🔍 Continuing to portal');
@@ -284,21 +287,34 @@ const TraeAwakensPage: React.FC = () => {
         if (isMountedRef.current) {
           console.log('🔍 Executing navigation');
           
-          // Check if we should show CTA
-          if (localStorage.getItem('neuropul_show_cta') === 'true' && localStorage.getItem('neuropul_is_paid') !== 'true') {
-            // Navigate to premium page
-            console.log('🔍 Navigating to premium page');
-            navigate('/premium', { replace: true });
-          } else {
-            // Navigate to home page
-            console.log('🔍 Navigating to home page');
-            navigate('/', { replace: true });
+          try {
+            // Check if we should show CTA
+            if (localStorage.getItem('neuropul_show_cta') === 'true' && localStorage.getItem('neuropul_is_paid') !== 'true') {
+              // Navigate to premium page
+              console.log('🔍 Navigating to premium page');
+              navigate('/premium', { replace: true });
+            } else {
+              // Navigate to home page
+              console.log('🔍 Navigating to home page');
+              navigate('/', { replace: true });
+            }
+            
+            // Reset navigation lock
+            isNavigatingRef.current = false;
+          } catch (navError) {
+            console.error('Navigation error:', navError);
+            isNavigatingRef.current = false;
+            
+            // If navigation fails, try again with a longer delay
+            if (navigationAttempts.current < 3) {
+              console.log(`🔍 Navigation attempt ${navigationAttempts.current} failed, retrying...`);
+              setTimeout(() => {
+                handleContinueToPortal();
+              }, 1000 * navigationAttempts.current);
+            }
           }
-          
-          // Reset navigation lock
-          isNavigatingRef.current = false;
         }
-      }, 1000);
+      }, 1500); // Increased delay to ensure state is saved before navigation
       
       timeoutRefs.current.push(redirectTimeout);
     } catch (error) {
@@ -316,7 +332,15 @@ const TraeAwakensPage: React.FC = () => {
       // Fallback navigation
       if (isMountedRef.current) {
         console.log('🔍 Fallback navigation to home page');
-        navigate('/', { replace: true });
+        setTimeout(() => {
+          try {
+            navigate('/', { replace: true });
+          } catch (navError) {
+            console.error('Fallback navigation error:', navError);
+            // Last resort: direct location change
+            window.location.href = '/';
+          }
+        }, 2000);
       }
     }
   };
@@ -366,6 +390,18 @@ const TraeAwakensPage: React.FC = () => {
       }
     };
   }, [currentScreen, navigate]);
+
+  // Manual navigation fallback
+  const handleManualNavigation = () => {
+    console.log('🔍 Manual navigation triggered');
+    try {
+      navigate('/', { replace: true });
+    } catch (error) {
+      console.error('Manual navigation error:', error);
+      // Direct location change as last resort
+      window.location.href = '/';
+    }
+  };
 
   return (
     <div className="relative min-h-screen overflow-hidden">
@@ -433,7 +469,7 @@ const TraeAwakensPage: React.FC = () => {
               <p className="text-gray-400 text-sm mt-2">Пожалуйста, подождите...</p>
               <div className="mt-8">
                 <button 
-                  onClick={() => navigate('/', { replace: true })}
+                  onClick={handleManualNavigation}
                   className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm"
                 >
                   Перейти на главную вручную

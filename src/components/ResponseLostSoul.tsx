@@ -254,14 +254,36 @@ const ResponseLostSoul: React.FC<ResponseLostSoulProps> = ({ onContinue, onBack 
       {/* Background cyberpunk elements with enhanced effects */}
       <div className="absolute inset-0 overflow-hidden">
         {/* Cyberpunk grid */}
-        <div className="absolute top-0 left-0 w-full h-full cyberpunk-grid"></div>
+        <div className="absolute top-0 left-0 w-full h-full bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxkZWZzPjxwYXR0ZXJuIGlkPSJncmlkIiB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHBhdHRlcm5Vbml0cz0idXNlclNwYWNlT25Vc2UiPjxwYXRoIGQ9Ik0gNDAgMCBMIDAgMCAwIDQwIiBmaWxsPSJub25lIiBzdHJva2U9IiM4YjVjZjYiIHN0cm9rZS13aWR0aD0iMC41Ii8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIiBvcGFjaXR5PSIwLjA1Ii8+PC9zdmc+')]"></div>
         
         {/* Animated glowing orbs */}
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-purple-500 rounded-full filter blur-[100px] opacity-20 animate-pulse"></div>
         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-500 rounded-full filter blur-[100px] opacity-20 animate-pulse" style={{ animationDelay: '1s' }}></div>
         
         {/* Digital rain effect (matrix-like) */}
-        <div className="absolute inset-0 opacity-10 pointer-events-none overflow-hidden digital-rain"></div>
+        <div className="absolute inset-0 opacity-10 pointer-events-none overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-full">
+            {Array.from({ length: 10 }).map((_, i) => (
+              <div 
+                key={i}
+                className="absolute text-cyan-500 text-xs font-mono"
+                style={{
+                  left: `${Math.random() * 100}%`,
+                  top: 0,
+                  opacity: 0.5 + Math.random() * 0.5,
+                  animation: `digitalRain ${5 + Math.random() * 10}s linear infinite`,
+                  animationDelay: `${Math.random() * 5}s`
+                }}
+              >
+                {Array.from({ length: 20 }).map((_, j) => (
+                  <div key={j} className="my-1">
+                    {Math.random() > 0.5 ? '1' : '0'}
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
         
         {/* Scanlines effect */}
         <div className="absolute inset-0 bg-scanline opacity-5 pointer-events-none"></div>

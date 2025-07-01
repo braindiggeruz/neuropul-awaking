@@ -11,27 +11,6 @@ let navigationAttempts = 0;
 const MAX_NAVIGATION_ATTEMPTS = 3;
 
 /**
- * Debounce function to prevent multiple rapid calls
- * @param func The function to debounce
- * @param wait Wait time in milliseconds
- * @returns Debounced function
- */
-export function debounce<T extends (...args: any[]) => void>(func: T, wait: number): T {
-  let timeout: NodeJS.Timeout | null = null;
-  
-  return function(this: any, ...args: any[]) {
-    const context = this;
-    
-    if (timeout) clearTimeout(timeout);
-    
-    timeout = setTimeout(() => {
-      timeout = null;
-      func.apply(context, args);
-    }, wait);
-  } as T;
-}
-
-/**
  * Safely navigate to a new screen with debouncing to prevent multiple clicks
  * @param callback The navigation callback function
  * @param delay Delay in milliseconds before allowing another navigation
@@ -144,7 +123,6 @@ export const forceNavigate = (path: string): void => {
     // Clear any portal state
     localStorage.removeItem('neuropul_current_screen');
     sessionStorage.removeItem('neuropul_current_screen');
-    localStorage.removeItem('neuropul_portal_state');
     localStorage.removeItem('neuropul_navigation_in_progress');
     localStorage.removeItem('hasPassedPortal');
     
@@ -164,7 +142,7 @@ export const forceNavigate = (path: string): void => {
       action: 'forceNavigate'
     });
     
-    // Last resort - direct location change
+    // Last resort
     window.location.href = path;
   }
 };

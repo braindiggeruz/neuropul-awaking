@@ -173,14 +173,11 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
   const handlePathSelect = (path: 'lost' | 'awakening' | 'ready') => {
     try {
       if (isNavigatingRef.current) {
-        console.log('[TraeAwakens] Navigation already in progress, ignoring path select');
         return;
       }
       
       setIsNavigating(true);
       isNavigatingRef.current = true;
-      
-      console.log(`[TraeAwakens] Path selected: ${path}`);
       
       playSound('click', true);
       vibrate([50, 30, 50], true);
@@ -215,7 +212,6 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
       // Call onPathSelect with a small delay to ensure state is saved
       const navigationTimeout = setTimeout(() => {
         if (isMountedRef.current) {
-          console.log(`[TraeAwakens] Calling onPathSelect with path: ${path}`);
           onPathSelect(path);
           
           // Reset navigation state after a delay in case the navigation fails
@@ -308,7 +304,6 @@ const TraeAwakens: React.FC<TraeAwakensProps> = ({ onPathSelect }) => {
         // Call onPathSelect with a small delay
         const navigationTimeout = setTimeout(() => {
           if (isMountedRef.current) {
-            console.log(`[TraeAwakens] Calling onPathSelect with detected path: ${detectedPath}`);
             onPathSelect(detectedPath);
             
             // Reset navigation state after a delay in case the navigation fails

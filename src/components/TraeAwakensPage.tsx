@@ -9,7 +9,6 @@ import { saveUserProgress, loadUserProgress, updateUserProgress } from '../utils
 import { logError } from '../lib/utils/errorLogger';
 import { cleanupAudio } from '../utils/audioUtils';
 import EmergencyResetButton from '../components/EmergencyResetButton';
-import { debounce } from '../utils/navigationUtils';
 
 type Screen = 'intro' | 'lost' | 'awakening' | 'ready' | 'portal';
 
@@ -38,7 +37,7 @@ const TraeAwakensPage: React.FC = () => {
       localStorage.removeItem('neuropul_current_screen');
       sessionStorage.removeItem('neuropul_current_screen');
       localStorage.removeItem('neuropul_navigation_in_progress');
-      localStorage.removeItem('hasPassedPortal');
+      localStorage.removeItem('hasPassedPortal'); // ADDED: Clear hasPassedPortal flag
       
       // Check if there's a saved path and screen
       const savedPath = localStorage.getItem('neuropul_user_path');
@@ -153,17 +152,10 @@ const TraeAwakensPage: React.FC = () => {
     };
   }, []);
 
-  // Force navigation to home - with debounce to prevent multiple calls
-  const forceNavigateToHome = debounce(() => {
+  // Force navigation to home
+  const forceNavigateToHome = () => {
     try {
       console.log('[TraeAwakensPage] Force navigation triggered - current screen:', currentScreen);
-      
-      // Prevent multiple navigation attempts
-      if (hasNavigatedRef.current) {
-        console.log('[TraeAwakensPage] Already navigated, ignoring duplicate call');
-        return;
-      }
-      
       navigationAttemptRef.current += 1;
       
       // Clear all portal-related storage
@@ -171,13 +163,12 @@ const TraeAwakensPage: React.FC = () => {
       sessionStorage.removeItem('neuropul_current_screen');
       localStorage.removeItem('neuropul_portal_state');
       localStorage.removeItem('neuropul_navigation_in_progress');
-      localStorage.removeItem('hasPassedPortal');
+      localStorage.removeItem('hasPassedPortal'); // ADDED: Clear hasPassedPortal flag
       
       // If we've tried navigate too many times, use direct location change
-      if (navigationAttemptRef.current > 2) {
+      if (navigationAttemptRef.current > 2 && !hasNavigatedRef.current) {
         console.log('[TraeAwakensPage] Too many navigation attempts, using direct location change');
         window.location.href = '/';
-        hasNavigatedRef.current = true;
         return;
       }
       
@@ -195,7 +186,7 @@ const TraeAwakensPage: React.FC = () => {
       // Last resort - direct location change
       window.location.href = '/';
     }
-  }, 300); // Debounce for 300ms to prevent multiple rapid calls
+  };
 
   const handlePathSelect = (path: 'lost' | 'awakening' | 'ready') => {
     // Prevent multiple navigation attempts

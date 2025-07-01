@@ -35,7 +35,6 @@ const renderApp = () => {
     
     const root = createRoot(rootElement);
     
-    // REMOVED StrictMode to prevent double rendering
     root.render(
       <ErrorBoundary>
         <App />

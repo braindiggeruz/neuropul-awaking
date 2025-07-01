@@ -26,43 +26,44 @@ setupGlobalErrorHandling();
 function App() {
   // Check for redirect from 404 page
   useEffect(() => {
-    try {
-      const url = new URL(window.location.href);
-      const redirectPath = url.searchParams.get('redirect');
+    const url = new URL(window.location.href);
+    const redirectPath = url.searchParams.get('redirect');
+    
+    if (redirectPath) {
+      // Remove the redirect parameter to prevent loops
+      url.searchParams.delete('redirect');
+      window.history.replaceState({}, '', url.toString());
       
-      if (redirectPath) {
-        // Remove the redirect parameter to prevent loops
-        url.searchParams.delete('redirect');
-        window.history.replaceState({}, '', url.toString());
-        
-        // Store the path for potential use after authentication
-        sessionStorage.setItem('redirectAfterAuth', redirectPath);
-      }
-      
-      // CRITICAL: Remove initial loader
-      const initialLoader = document.getElementById('initial-loader');
-      if (initialLoader) {
-        console.log('🚀 Removing initial loader');
-        initialLoader.style.opacity = '0';
-        initialLoader.style.transition = 'opacity 0.5s ease';
-        setTimeout(() => {
-          if (initialLoader.parentNode) {
-            initialLoader.parentNode.removeChild(initialLoader);
-            console.log('✅ Initial loader removed from DOM');
-          }
-        }, 500);
-      }
-      
-      // CRITICAL: Clear any portal-related storage to prevent loops
+      // Store the path for potential use after authentication
+      sessionStorage.setItem('redirectAfterAuth', redirectPath);
+    }
+    
+    // CRITICAL: Remove initial loader
+    const initialLoader = document.getElementById('initial-loader');
+    if (initialLoader) {
+      console.log('🚀 Removing initial loader');
+      initialLoader.style.opacity = '0';
+      initialLoader.style.transition = 'opacity 0.5s ease';
+      setTimeout(() => {
+        if (initialLoader.parentNode) {
+          initialLoader.parentNode.removeChild(initialLoader);
+          console.log('✅ Initial loader removed from DOM');
+        }
+      }, 500);
+    }
+    
+    // CRITICAL: Clear any portal state to prevent navigation loops
+    const isPortalScreen = localStorage.getItem('neuropul_current_screen') === 'portal';
+    if (isPortalScreen) {
+      console.log('🔄 Detected portal screen in storage, clearing to prevent loops');
       localStorage.removeItem('neuropul_current_screen');
       sessionStorage.removeItem('neuropul_current_screen');
       localStorage.removeItem('neuropul_navigation_in_progress');
-      
-      // Log current path for debugging
-      console.log('📍 Current path:', window.location.pathname);
-    } catch (error) {
-      console.error('Error in App useEffect:', error);
+      localStorage.removeItem('hasPassedPortal');
     }
+    
+    // Log current path for debugging
+    console.log('📍 Current path:', window.location.pathname);
   }, []);
 
   return (

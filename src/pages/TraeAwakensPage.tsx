@@ -111,7 +111,9 @@ const TraeAwakensPage: React.FC = () => {
           }
         }, 10000); // 10 second escape hatch
         
-        timeoutRefs.current.push(portalTimeoutRef.current);
+        if (portalTimeoutRef.current) {
+          timeoutRefs.current.push(portalTimeoutRef.current);
+        }
       }
 
       // Log current path for debugging
@@ -189,6 +191,7 @@ const TraeAwakensPage: React.FC = () => {
   const handlePathSelect = (path: 'lost' | 'awakening' | 'ready') => {
     // Prevent multiple navigation attempts
     if (isNavigatingRef.current) {
+      console.log('[TraeAwakensPage] Navigation already in progress, ignoring path select');
       return;
     }
     
@@ -242,6 +245,7 @@ const TraeAwakensPage: React.FC = () => {
   const handleBack = () => {
     // Prevent multiple navigation attempts
     if (isNavigatingRef.current) {
+      console.log('[TraeAwakensPage] Navigation already in progress, ignoring back');
       return;
     }
     
@@ -284,6 +288,7 @@ const TraeAwakensPage: React.FC = () => {
   const handleContinueToPortal = () => {
     // Prevent multiple navigation attempts
     if (isNavigatingRef.current) {
+      console.log('[TraeAwakensPage] Navigation already in progress, ignoring continue to portal');
       return;
     }
     

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import TraeAwakens from '../components/TraeAwakens';
 import ResponseLostSoul from '../components/ResponseLostSoul';
 import ResponseAwakening from '../components/ResponseAwakening';
@@ -17,6 +17,7 @@ const TraeAwakensPage: React.FC = () => {
   const [sessionId, setSessionId] = useState<string>('');
   const [viewCount, setViewCount] = useState(0);
   const navigate = useNavigate();
+  const location = useLocation();
   
   // Refs for cleanup and navigation control
   const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -25,25 +26,56 @@ const TraeAwakensPage: React.FC = () => {
   const isMountedRef = useRef<boolean>(true);
   const navigationAttempts = useRef<number>(0);
   const maxNavigationAttempts = 3;
+  const forceNavigationTriggered = useRef<boolean>(false);
 
   // Initialize session and tracking
   useEffect(() => {
     try {
-      console.log('🔍 TraeAwakensPage mounted');
+      console.log('🔍 TraeAwakensPage mounted, pathname:', location.pathname);
+      
+      // Remove initial loader if it's still there
+      const initialLoader = document.getElementById('initial-loader');
+      if (initialLoader) {
+        console.log('🧹 Removing initial loader that was still present');
+        initialLoader.style.display = 'none';
+        initialLoader.remove();
+      }
+      
+      // Check if we're already on a different route
+      if (location.pathname !== '/' && location.pathname !== '/awakening') {
+        console.log(`🔍 Already on a different route: ${location.pathname}, not restoring saved screen`);
+        return;
+      }
       
       // Check if there's a saved path and screen
       const savedPath = localStorage.getItem('neuropul_user_path');
       const savedScreen = localStorage.getItem('neuropul_current_screen');
       
+      console.log(`🔍 Saved path: ${savedPath}, saved screen: ${savedScreen}`);
+      
       if (savedPath) {
         setUserPath(savedPath);
-        console.log('📂 Loaded saved path:', savedPath);
         
         // If there's a saved screen that's not 'intro', restore it
         if (savedScreen && savedScreen !== 'intro' && 
-            ['lost', 'awakening', 'ready', 'portal'].includes(savedScreen)) {
+            ['lost', 'awakening', 'ready'].includes(savedScreen)) {
+          
+          // CRITICAL FIX: Don't restore 'portal' screen to avoid navigation loop
           setCurrentScreen(savedScreen as Screen);
           console.log('📂 Restored saved screen:', savedScreen);
+        } else if (savedScreen === 'portal') {
+          console.log('⚠️ Not restoring portal screen to avoid navigation loop');
+          // Clear the saved screen to prevent future loops
+          localStorage.removeItem('neuropul_current_screen');
+          
+          // If intro is completed, navigate directly to home
+          if (localStorage.getItem('neuropul_intro_completed') === 'true') {
+            console.log('🔄 Intro already completed, navigating directly to home');
+            setTimeout(() => {
+              window.location.href = '/';
+            }, 100);
+            return;
+          }
         }
       }
       
@@ -100,13 +132,6 @@ const TraeAwakensPage: React.FC = () => {
       
       // Set mounted flag
       isMountedRef.current = true;
-      
-      // Remove initial loader if it's still there
-      const initialLoader = document.getElementById('initial-loader');
-      if (initialLoader) {
-        console.log('🧹 Removing initial loader that was still present');
-        initialLoader.style.display = 'none';
-      }
     } catch (error) {
       console.error('Error initializing session:', error);
       logError(error, {
@@ -132,7 +157,7 @@ const TraeAwakensPage: React.FC = () => {
       // Clean up audio
       cleanupAudio();
     };
-  }, []);
+  }, [location.pathname, navigate]);
 
   const handlePathSelect = (path: 'lost' | 'awakening' | 'ready') => {
     // Prevent multiple navigation attempts
@@ -235,28 +260,6 @@ const TraeAwakensPage: React.FC = () => {
     }
   };
 
-  // Function to attempt navigation with retry logic
-  const attemptNavigation = (destination: string, replace: boolean = true) => {
-    navigationAttempts.current += 1;
-    console.log(`🧭 Navigation attempt ${navigationAttempts.current}/${maxNavigationAttempts} to ${destination}`);
-    
-    try {
-      console.log(`🔄 Navigating to ${destination}`);
-      navigate(destination, { replace });
-      console.log('✅ Navigation completed successfully');
-      return true;
-    } catch (navError) {
-      console.error('❌ Navigation error:', navError);
-      logError(navError, {
-        component: 'TraeAwakensPage',
-        action: 'navigate',
-        additionalData: { destination, attempt: navigationAttempts.current }
-      });
-      
-      return false;
-    }
-  };
-
   const handleContinueToPortal = () => {
     // Prevent multiple navigation attempts
     if (isNavigatingRef.current) {
@@ -273,8 +276,8 @@ const TraeAwakensPage: React.FC = () => {
         setCurrentScreen('portal');
       }
       
-      // Update localStorage
-      localStorage.setItem('neuropul_current_screen', 'portal');
+      // CRITICAL FIX: Don't save portal as current screen
+      // localStorage.setItem('neuropul_current_screen', 'portal');
       
       // Set completion flag
       localStorage.setItem('neuropul_intro_completed', 'true');
@@ -296,43 +299,19 @@ const TraeAwakensPage: React.FC = () => {
       // Navigate to home or premium page after a delay
       const redirectTimeout = setTimeout(() => {
         if (isMountedRef.current) {
+          // CRITICAL FIX: Clear localStorage to prevent restoration loop
+          localStorage.removeItem('neuropul_current_screen');
+          
           // Determine destination
           const destination = localStorage.getItem('neuropul_show_cta') === 'true' && 
                              localStorage.getItem('neuropul_is_paid') !== 'true' 
                              ? '/premium' 
                              : '/';
           
-          // Attempt navigation
-          const success = attemptNavigation(destination);
-          
-          // If navigation fails and we haven't tried too many times, try again
-          if (!success && navigationAttempts.current < maxNavigationAttempts) {
-            console.log(`🔄 Scheduling retry navigation (attempt ${navigationAttempts.current + 1}/${maxNavigationAttempts})`);
-            const retryTimeout = setTimeout(() => {
-              if (isMountedRef.current) {
-                const retrySuccess = attemptNavigation(destination);
-                
-                // If still failing after retries, use location.href as fallback
-                if (!retrySuccess && navigationAttempts.current >= maxNavigationAttempts) {
-                  console.log('🔄 Max navigation attempts reached, using location.href fallback');
-                  window.location.href = destination;
-                }
-              }
-            }, 1500);
-            
-            timeoutRefs.current.push(retryTimeout);
-          } else if (!success) {
-            // If we've tried enough times, use location.href as fallback
-            console.log('🔄 Max navigation attempts reached, using location.href fallback');
-            window.location.href = destination;
-          }
-          
-          // Reset navigation lock if successful
-          if (success) {
-            isNavigatingRef.current = false;
-          }
+          console.log(`🔄 Navigating to ${destination} with window.location.href`);
+          window.location.href = destination;
         }
-      }, 1000);
+      }, 2000);
       
       timeoutRefs.current.push(redirectTimeout);
     } catch (error) {
@@ -397,18 +376,26 @@ const TraeAwakensPage: React.FC = () => {
         inactivityTimerRef.current = null;
       }
     };
-  }, [currentScreen, navigate]);
+  }, [currentScreen]);
 
   // Add emergency escape hatch
   useEffect(() => {
     if (currentScreen === 'portal') {
       console.log('🚨 Portal screen detected, adding emergency escape timeout');
+      
+      // CRITICAL FIX: Force navigation after a short delay
       const escapeTimeout = setTimeout(() => {
-        if (currentScreen === 'portal' && isMountedRef.current) {
+        if (currentScreen === 'portal' && isMountedRef.current && !forceNavigationTriggered.current) {
           console.log('⚠️ Emergency escape triggered - portal screen was active too long');
+          forceNavigationTriggered.current = true;
+          
+          // Clear localStorage to prevent restoration loop
+          localStorage.removeItem('neuropul_current_screen');
+          
+          // Use direct location change as last resort
           window.location.href = '/';
         }
-      }, 10000); // 10 seconds max on portal screen
+      }, 5000); // 5 seconds max on portal screen
       
       timeoutRefs.current.push(escapeTimeout);
       
@@ -418,27 +405,14 @@ const TraeAwakensPage: React.FC = () => {
     }
   }, [currentScreen]);
 
-  // Force navigation if we're stuck on the portal screen
-  useEffect(() => {
-    if (currentScreen === 'portal') {
-      const forceNavigationTimeout = setTimeout(() => {
-        if (currentScreen === 'portal' && isMountedRef.current) {
-          console.log('⚠️ Force navigation triggered - still on portal screen');
-          window.location.href = '/';
-        }
-      }, 5000); // 5 seconds on portal screen before forcing navigation
-      
-      timeoutRefs.current.push(forceNavigationTimeout);
-      
-      return () => {
-        clearTimeout(forceNavigationTimeout);
-      };
-    }
-  }, [currentScreen]);
-
   // Direct navigation function for emergency button
   const handleDirectNavigation = () => {
     console.log('🚨 Emergency navigation button clicked');
+    
+    // CRITICAL FIX: Clear localStorage to prevent restoration loop
+    localStorage.removeItem('neuropul_current_screen');
+    
+    // Use direct location change
     window.location.href = '/';
   };
 

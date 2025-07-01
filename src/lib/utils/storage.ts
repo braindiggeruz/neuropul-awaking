@@ -93,6 +93,7 @@ export const useStorage = () => {
       localStorage.removeItem(BACKUP_KEY);
       localStorage.removeItem('neuropul_awakening_completed');
       localStorage.removeItem('neuropul_pdf_generated');
+      localStorage.removeItem('neuropul_current_screen'); // CRITICAL FIX: Also clear current screen
       console.log('🗑️ All progress cleared');
     } catch (error) {
       console.error('❌ Failed to clear progress:', error);

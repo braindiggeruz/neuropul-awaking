@@ -1,4 +1,4 @@
-import { StrictMode } from 'react';
+import React from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
@@ -38,6 +38,13 @@ window.addEventListener('load', removeLoader);
 
 // DOMContentLoaded (на всякий случай)
 document.addEventListener('DOMContentLoaded', removeLoader);
+
+// Check for portal screen and clear it
+const currentScreen = localStorage.getItem('neuropul_current_screen');
+if (currentScreen === 'portal') {
+  console.log('⚠️ Detected portal screen on app start, clearing to prevent loops');
+  localStorage.removeItem('neuropul_current_screen');
+}
 
 // Create a function to handle errors during rendering
 const renderApp = () => {

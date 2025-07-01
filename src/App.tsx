@@ -28,17 +28,26 @@ const PortalGuard = () => {
     // Check if we're on the portal screen and it's been shown before
     const currentScreen = localStorage.getItem('neuropul_current_screen');
     const introCompleted = localStorage.getItem('neuropul_intro_completed');
+    const navigationInProgress = localStorage.getItem('neuropul_navigation_in_progress');
     
-    console.log(`🔍 PortalGuard - currentScreen: ${currentScreen}, introCompleted: ${introCompleted}, pathname: ${location.pathname}`);
+    console.log(`🔍 PortalGuard - currentScreen: ${currentScreen}, introCompleted: ${introCompleted}, pathname: ${location.pathname}, navigationInProgress: ${navigationInProgress}`);
     
-    if (currentScreen === 'portal' && introCompleted === 'true') {
-      console.log('⚠️ PortalGuard - Detected portal screen with completed intro, redirecting to home');
+    if (currentScreen === 'portal' || navigationInProgress === 'true') {
+      console.log('⚠️ PortalGuard - Detected portal screen or navigation in progress, clearing state');
       
-      // Clear the current screen to prevent future loops
+      // Clear all navigation flags to prevent loops
       localStorage.removeItem('neuropul_current_screen');
+      localStorage.removeItem('neuropul_navigation_in_progress');
       
-      // Navigate to home
-      navigate('/', { replace: true });
+      // If intro is completed, redirect to home
+      if (introCompleted === 'true') {
+        console.log('⚠️ PortalGuard - Intro completed, redirecting to home');
+        
+        // Use setTimeout to ensure this happens after current render cycle
+        setTimeout(() => {
+          navigate('/', { replace: true });
+        }, 100);
+      }
     }
   }, [location.pathname, navigate]);
   
@@ -71,18 +80,31 @@ function App() {
       initialLoader.style.transition = 'opacity 0.5s ease';
       setTimeout(() => {
         if (initialLoader && initialLoader.parentNode) {
-          initialLoader.remove();
+          initialLoader.parentNode.removeChild(initialLoader);
           console.log('🧹 Initial loader removed from App component');
         }
       }, 500);
     }
     
-    // Check for portal screen and clear it if needed
+    // CRITICAL FIX: Check for portal screen and clear it if needed
     const currentScreen = localStorage.getItem('neuropul_current_screen');
     if (currentScreen === 'portal') {
       console.log('⚠️ App detected portal screen on mount, clearing to prevent loops');
       localStorage.removeItem('neuropul_current_screen');
     }
+    
+    // CRITICAL FIX: Check for navigation in progress and clear it if needed
+    const navigationInProgress = localStorage.getItem('neuropul_navigation_in_progress');
+    if (navigationInProgress === 'true') {
+      console.log('⚠️ App detected navigation in progress on mount, clearing to prevent loops');
+      localStorage.removeItem('neuropul_navigation_in_progress');
+    }
+    
+    // CRITICAL FIX: Remove all loaders that might be present
+    document.querySelectorAll('.initial-loader, .fallback-loader').forEach(el => {
+      console.log('🧹 Removing loader element:', el);
+      el.remove();
+    });
   }, []);
 
   return (

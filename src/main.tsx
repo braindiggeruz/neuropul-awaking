@@ -11,6 +11,11 @@ setupGlobalErrorHandling();
 
 console.log('🌐 main.tsx запускается');
 
+// CRITICAL FIX: Clear portal screen and navigation flags on app start
+console.log('🧹 Cleaning up navigation state on app start');
+localStorage.removeItem('neuropul_current_screen');
+localStorage.removeItem('neuropul_navigation_in_progress');
+
 // Удаление лоадера если он остался висеть
 const removeLoader = () => {
   console.log('🧹 Attempting to remove initial loader');
@@ -21,7 +26,7 @@ const removeLoader = () => {
     loader.style.transition = 'opacity 0.5s ease';
     setTimeout(() => {
       if (loader && loader.parentNode) {
-        loader.remove();
+        loader.parentNode.removeChild(loader);
         console.log('🧹 Initial loader removed');
       }
     }, 500);
@@ -38,13 +43,6 @@ window.addEventListener('load', removeLoader);
 
 // DOMContentLoaded (на всякий случай)
 document.addEventListener('DOMContentLoaded', removeLoader);
-
-// Check for portal screen and clear it
-const currentScreen = localStorage.getItem('neuropul_current_screen');
-if (currentScreen === 'portal') {
-  console.log('⚠️ Detected portal screen on app start, clearing to prevent loops');
-  localStorage.removeItem('neuropul_current_screen');
-}
 
 // Create a function to handle errors during rendering
 const renderApp = () => {
@@ -80,6 +78,11 @@ const renderApp = () => {
             <button onclick="window.location.reload()" style="background: #8b5cf6; border: none; color: white; padding: 12px 24px; border-radius: 8px; cursor: pointer;">
               Обновить страницу
             </button>
+            <div style="margin-top: 16px;">
+              <button onclick="localStorage.clear(); sessionStorage.clear(); window.location.href = '/';" style="background: #ef4444; border: none; color: white; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 12px;">
+                Сбросить данные и перезагрузить
+              </button>
+            </div>
           </div>
         </div>
       `;
@@ -94,3 +97,12 @@ const renderApp = () => {
 renderApp();
 
 console.log('🚀 React отрендерен');
+
+// CRITICAL FIX: Add emergency escape hatch
+window.addEventListener('error', (event) => {
+  console.error('🚨 Uncaught error:', event.error);
+  
+  // If there's an error, clear navigation state
+  localStorage.removeItem('neuropul_current_screen');
+  localStorage.removeItem('neuropul_navigation_in_progress');
+});

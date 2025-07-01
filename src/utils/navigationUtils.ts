@@ -1,10 +1,15 @@
 import { logError } from '../lib/utils/errorLogger';
+import { isCi } from 'ci-info';
 
 // Check if navigation is in progress
 let isNavigating = false;
 
 // Set a timeout to automatically reset navigation state
 let navigationResetTimeout: NodeJS.Timeout | null = null;
+
+// Track navigation attempts
+let navigationAttempts = 0;
+const MAX_NAVIGATION_ATTEMPTS = 3;
 
 /**
  * Safely navigate to a new screen with debouncing to prevent multiple clicks
@@ -25,7 +30,11 @@ export const safeNavigate = async (
     
     // Set navigating state
     isNavigating = true;
-    console.log('Navigation started');
+    navigationAttempts++;
+    console.log(`Navigation started (attempt ${navigationAttempts}/${MAX_NAVIGATION_ATTEMPTS})`);
+    
+    // Set a flag in localStorage to indicate navigation is in progress
+    localStorage.setItem('neuropul_navigation_in_progress', 'true');
     
     // Clear any existing timeout
     if (navigationResetTimeout) {
@@ -36,6 +45,7 @@ export const safeNavigate = async (
     navigationResetTimeout = setTimeout(() => {
       console.log('Navigation timeout reached, resetting state');
       isNavigating = false;
+      localStorage.removeItem('neuropul_navigation_in_progress');
     }, 5000); // 5 second safety timeout
     
     // Execute the navigation callback
@@ -51,6 +61,9 @@ export const safeNavigate = async (
         clearTimeout(navigationResetTimeout);
         navigationResetTimeout = null;
       }
+      
+      // Clear the navigation flag
+      localStorage.removeItem('neuropul_navigation_in_progress');
     }, delay);
     
     return true;
@@ -70,6 +83,15 @@ export const safeNavigate = async (
       navigationResetTimeout = null;
     }
     
+    // Clear the navigation flag
+    localStorage.removeItem('neuropul_navigation_in_progress');
+    
+    // If we've tried too many times, use direct location change
+    if (navigationAttempts >= MAX_NAVIGATION_ATTEMPTS) {
+      console.log('Too many navigation attempts, using direct location change');
+      window.location.href = '/';
+    }
+    
     return false;
   }
 };
@@ -79,7 +101,7 @@ export const safeNavigate = async (
  * @returns Boolean indicating if navigation is in progress
  */
 export const isNavigationInProgress = (): boolean => {
-  return isNavigating;
+  return isNavigating || localStorage.getItem('neuropul_navigation_in_progress') === 'true';
 };
 
 /**
@@ -87,12 +109,16 @@ export const isNavigationInProgress = (): boolean => {
  */
 export const resetNavigationState = (): void => {
   isNavigating = false;
+  navigationAttempts = 0;
   
   // Clear any existing timeout
   if (navigationResetTimeout) {
     clearTimeout(navigationResetTimeout);
     navigationResetTimeout = null;
   }
+  
+  // Clear the navigation flag
+  localStorage.removeItem('neuropul_navigation_in_progress');
   
   console.log('Navigation state forcibly reset');
 };
@@ -103,8 +129,13 @@ export const resetNavigationState = (): void => {
  */
 export const saveNavigationPath = (path: string): void => {
   try {
-    localStorage.setItem('neuropul_current_path', path);
-    localStorage.setItem('neuropul_last_navigation', new Date().toISOString());
+    // Don't save 'portal' as a path to prevent loops
+    if (path !== 'portal') {
+      localStorage.setItem('neuropul_current_path', path);
+      localStorage.setItem('neuropul_last_navigation', new Date().toISOString());
+    } else {
+      console.log('Not saving portal path to prevent navigation loops');
+    }
   } catch (error) {
     console.error('Error saving navigation path:', error);
     logError(error, {
@@ -130,3 +161,61 @@ export const getLastNavigationPath = (): string | null => {
     return null;
   }
 };
+
+/**
+ * Force navigation to a specific path using window.location
+ * This is more reliable than React Router's navigate in some cases
+ * @param path The path to navigate to
+ */
+export const forceNavigate = (path: string): void => {
+  try {
+    console.log(`Force navigating to: ${path}`);
+    
+    // Clear navigation state
+    resetNavigationState();
+    
+    // Clear portal screen from localStorage
+    localStorage.removeItem('neuropul_current_screen');
+    
+    // Use window.location for more reliable navigation
+    window.location.href = path;
+  } catch (error) {
+    console.error('Error in force navigation:', error);
+    logError(error, {
+      component: 'navigationUtils',
+      action: 'forceNavigate'
+    });
+    
+    // Last resort - reload the page
+    window.location.reload();
+  }
+};
+
+/**
+ * Emergency system reset - clears all state and navigates to home
+ * Use this as a last resort when navigation is completely stuck
+ */
+export const emergencyReset = (): void => {
+  try {
+    console.log('🚨 EMERGENCY SYSTEM RESET INITIATED');
+    
+    // Clear all localStorage
+    localStorage.clear();
+    
+    // Clear all sessionStorage
+    sessionStorage.clear();
+    
+    // Force navigation to home
+    window.location.href = '/';
+  } catch (error) {
+    console.error('Error in emergency reset:', error);
+    
+    // If even this fails, reload the page
+    window.location.reload();
+  }
+};
+
+// Add a global emergency reset function for debugging
+if (!isCi && typeof window !== 'undefined') {
+  (window as any).emergencyReset = emergencyReset;
+}

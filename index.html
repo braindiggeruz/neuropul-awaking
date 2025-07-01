@@ -128,6 +128,11 @@
     </noscript>
     
     <script>
+      // CRITICAL FIX: Clear portal screen and navigation flags on page load
+      localStorage.removeItem('neuropul_current_screen');
+      localStorage.removeItem('neuropul_navigation_in_progress');
+      console.log('🧹 Cleared navigation state from HTML script');
+      
       // Remove the initial loader once the app has loaded
       window.addEventListener('load', function() {
         const loader = document.getElementById('initial-loader');
@@ -137,7 +142,7 @@
           loader.style.transition = 'opacity 0.5s ease';
           setTimeout(function() {
             if (loader && loader.parentNode) {
-              loader.remove();
+              loader.parentNode.removeChild(loader);
               console.log('Initial loader removed from load event');
             }
           }, 500);
@@ -153,12 +158,24 @@
           loader.style.transition = 'opacity 0.5s ease';
           setTimeout(function() {
             if (loader && loader.parentNode) {
-              loader.remove();
+              loader.parentNode.removeChild(loader);
               console.log('Initial loader removed from fallback timeout');
             }
           }, 500);
         }
       }, 5000);
+      
+      // CRITICAL FIX: Add emergency escape hatch
+      setTimeout(function() {
+        // Check if we're still on the portal screen after 10 seconds
+        if (localStorage.getItem('neuropul_current_screen') === 'portal' || 
+            localStorage.getItem('neuropul_navigation_in_progress') === 'true') {
+          console.log('🚨 EMERGENCY ESCAPE: Still on portal after 10 seconds');
+          localStorage.removeItem('neuropul_current_screen');
+          localStorage.removeItem('neuropul_navigation_in_progress');
+          window.location.href = '/';
+        }
+      }, 10000);
     </script>
   </body>
 </html>

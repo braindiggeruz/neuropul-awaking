@@ -12,11 +12,13 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "clean": "rm -rf dist .vite node_modules/.vite .vite_cache",
-    "deploy": "netlify deploy --prod --dir=dist"
+    "deploy": "netlify deploy --prod --dir=dist",
+    "debug": "ENABLE_DEBUG=true vite",
+    "reset": "node scripts/reset-storage.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.50.2",
-    "ci-info": "^4.0.0",
+    "ci-info": "^4.2.0",
     "framer-motion": "^10.18.0",
     "html2canvas": "^1.4.1",
     "jspdf": "^2.5.2",

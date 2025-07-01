@@ -27,18 +27,27 @@ const TraeAwakensPage: React.FC = () => {
   const navigationAttempts = useRef<number>(0);
   const maxNavigationAttempts = 3;
   const forceNavigationTriggered = useRef<boolean>(false);
+  const portalEnteredTime = useRef<number | null>(null);
 
   // Initialize session and tracking
   useEffect(() => {
     try {
       console.log('🔍 TraeAwakensPage mounted, pathname:', location.pathname);
       
+      // CRITICAL: Clear portal screen from localStorage on mount to prevent loops
+      if (localStorage.getItem('neuropul_current_screen') === 'portal') {
+        console.log('🚨 CRITICAL: Detected portal screen in localStorage on mount, removing it');
+        localStorage.removeItem('neuropul_current_screen');
+      }
+      
       // Remove initial loader if it's still there
       const initialLoader = document.getElementById('initial-loader');
       if (initialLoader) {
         console.log('🧹 Removing initial loader that was still present');
         initialLoader.style.display = 'none';
-        initialLoader.remove();
+        if (initialLoader.parentNode) {
+          initialLoader.parentNode.removeChild(initialLoader);
+        }
       }
       
       // Check if we're already on a different route
@@ -274,10 +283,12 @@ const TraeAwakensPage: React.FC = () => {
       // Update state
       if (isMountedRef.current) {
         setCurrentScreen('portal');
+        portalEnteredTime.current = Date.now();
       }
       
       // CRITICAL FIX: Don't save portal as current screen
-      // localStorage.setItem('neuropul_current_screen', 'portal');
+      // Instead, mark that we're in transition
+      localStorage.setItem('neuropul_navigation_in_progress', 'true');
       
       // Set completion flag
       localStorage.setItem('neuropul_intro_completed', 'true');
@@ -296,12 +307,12 @@ const TraeAwakensPage: React.FC = () => {
         localStorage.setItem('neuropul_show_cta', 'true');
       }
       
+      // CRITICAL FIX: Clear any existing portal screen from localStorage
+      localStorage.removeItem('neuropul_current_screen');
+      
       // Navigate to home or premium page after a delay
       const redirectTimeout = setTimeout(() => {
         if (isMountedRef.current) {
-          // CRITICAL FIX: Clear localStorage to prevent restoration loop
-          localStorage.removeItem('neuropul_current_screen');
-          
           // Determine destination
           const destination = localStorage.getItem('neuropul_show_cta') === 'true' && 
                              localStorage.getItem('neuropul_is_paid') !== 'true' 
@@ -309,6 +320,12 @@ const TraeAwakensPage: React.FC = () => {
                              : '/';
           
           console.log(`🔄 Navigating to ${destination} with window.location.href`);
+          
+          // CRITICAL FIX: Clear localStorage navigation flags
+          localStorage.removeItem('neuropul_current_screen');
+          localStorage.removeItem('neuropul_navigation_in_progress');
+          
+          // Use direct location change for more reliable navigation
           window.location.href = destination;
         }
       }, 2000);
@@ -327,6 +344,11 @@ const TraeAwakensPage: React.FC = () => {
       // Fallback navigation
       if (isMountedRef.current) {
         console.log('🔄 Using fallback navigation');
+        
+        // CRITICAL FIX: Clear localStorage navigation flags
+        localStorage.removeItem('neuropul_current_screen');
+        localStorage.removeItem('neuropul_navigation_in_progress');
+        
         window.location.href = '/';
       }
     }
@@ -378,19 +400,21 @@ const TraeAwakensPage: React.FC = () => {
     };
   }, [currentScreen]);
 
-  // Add emergency escape hatch
+  // Add emergency escape hatch for portal screen
   useEffect(() => {
     if (currentScreen === 'portal') {
       console.log('🚨 Portal screen detected, adding emergency escape timeout');
+      portalEnteredTime.current = Date.now();
       
       // CRITICAL FIX: Force navigation after a short delay
       const escapeTimeout = setTimeout(() => {
         if (currentScreen === 'portal' && isMountedRef.current && !forceNavigationTriggered.current) {
-          console.log('⚠️ Emergency escape triggered - portal screen was active too long');
+          console.log('⚠️ Force navigation triggered - still on portal screen');
           forceNavigationTriggered.current = true;
           
           // Clear localStorage to prevent restoration loop
           localStorage.removeItem('neuropul_current_screen');
+          localStorage.removeItem('neuropul_navigation_in_progress');
           
           // Use direct location change as last resort
           window.location.href = '/';
@@ -407,13 +431,36 @@ const TraeAwakensPage: React.FC = () => {
 
   // Direct navigation function for emergency button
   const handleDirectNavigation = () => {
-    console.log('🚨 Emergency navigation button clicked');
+    console.log('🚨 Manual navigation button clicked');
     
     // CRITICAL FIX: Clear localStorage to prevent restoration loop
     localStorage.removeItem('neuropul_current_screen');
+    localStorage.removeItem('neuropul_navigation_in_progress');
     
     // Use direct location change
     window.location.href = '/';
+  };
+
+  // CRITICAL FIX: Add system diagnostic info
+  const getDiagnosticInfo = () => {
+    try {
+      return {
+        currentScreen,
+        userPath,
+        portalTime: portalEnteredTime.current ? Math.round((Date.now() - portalEnteredTime.current) / 1000) : null,
+        localStorage: {
+          currentScreen: localStorage.getItem('neuropul_current_screen'),
+          userPath: localStorage.getItem('neuropul_user_path'),
+          introCompleted: localStorage.getItem('neuropul_intro_completed'),
+          navigationInProgress: localStorage.getItem('neuropul_navigation_in_progress')
+        },
+        navigationAttempts: navigationAttempts.current,
+        forceNavigationTriggered: forceNavigationTriggered.current,
+        pathname: location.pathname
+      };
+    } catch (e) {
+      return { error: String(e) };
+    }
   };
 
   return (
@@ -492,6 +539,14 @@ const TraeAwakensPage: React.FC = () => {
             
             <div className="mt-4 text-gray-500 text-xs">
               Если переход не происходит автоматически, нажмите кнопку выше
+            </div>
+            
+            {/* System diagnostic info */}
+            <div className="mt-8 p-4 bg-black bg-opacity-50 rounded-lg max-w-md text-left text-xs text-gray-400">
+              <div className="font-mono">
+                <div>Диагностика системы:</div>
+                <pre>{JSON.stringify(getDiagnosticInfo(), null, 2)}</pre>
+              </div>
             </div>
           </motion.div>
         )}

@@ -9,6 +9,8 @@ import { setupGlobalErrorHandling } from './lib/utils/errorLogger';
 // Set up global error handling
 setupGlobalErrorHandling();
 
+console.log('🌐 main.tsx запускается');
+
 // Удаление лоадера если он остался висеть
 const removeLoader = () => {
   console.log('🧹 Attempting to remove initial loader');
@@ -18,11 +20,13 @@ const removeLoader = () => {
     loader.style.opacity = '0';
     loader.style.transition = 'opacity 0.5s ease';
     setTimeout(() => {
-      if (loader.parentNode) {
+      if (loader && loader.parentNode) {
         loader.remove();
         console.log('🧹 Initial loader removed');
       }
     }, 500);
+  } else {
+    console.log('🧹 Initial loader not found');
   }
 };
 
@@ -34,8 +38,6 @@ window.addEventListener('load', removeLoader);
 
 // DOMContentLoaded (на всякий случай)
 document.addEventListener('DOMContentLoaded', removeLoader);
-
-console.log('🌐 main.tsx запускается');
 
 // Create a function to handle errors during rendering
 const renderApp = () => {
@@ -51,9 +53,8 @@ const renderApp = () => {
     
     console.log('🔍 Rendering React app');
     root.render(
-      <StrictMode>
-        <App />
-      </StrictMode>
+      // Temporarily remove StrictMode to avoid double mounting effects
+      <App />
     );
     
     console.log('✅ React rendered successfully');
@@ -76,6 +77,9 @@ const renderApp = () => {
         </div>
       `;
     }
+    
+    // Also remove the loader
+    removeLoader();
   }
 };
 

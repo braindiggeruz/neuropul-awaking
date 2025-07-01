@@ -60,5 +60,6 @@ export default defineConfig(({ mode }) => {
     },
     cacheDir: '.vite_cache',
     clearScreen: false, // Keep console output
+    base: '/', // Ensure base path is set correctly
   };
 });

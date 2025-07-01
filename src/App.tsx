@@ -44,8 +44,9 @@ function App() {
       initialLoader.style.opacity = '0';
       initialLoader.style.transition = 'opacity 0.5s ease';
       setTimeout(() => {
-        if (initialLoader.parentNode) {
+        if (initialLoader && initialLoader.parentNode) {
           initialLoader.remove();
+          console.log('🧹 Initial loader removed from App component');
         }
       }, 500);
     }
@@ -53,7 +54,7 @@ function App() {
 
   return (
     <FocusManager>
-      <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+      <Router>
         <ScrollToTop />
         <TitleManager>
           <Suspense fallback={<LoadingFallback />}>

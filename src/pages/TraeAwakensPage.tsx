@@ -24,6 +24,7 @@ const TraeAwakensPage: React.FC = () => {
   const timeoutRefs = useRef<NodeJS.Timeout[]>([]);
   const isMountedRef = useRef<boolean>(true);
   const navigationAttempts = useRef<number>(0);
+  const maxNavigationAttempts = 3;
 
   // Initialize session and tracking
   useEffect(() => {
@@ -234,6 +235,28 @@ const TraeAwakensPage: React.FC = () => {
     }
   };
 
+  // Function to attempt navigation with retry logic
+  const attemptNavigation = (destination: string, replace: boolean = true) => {
+    navigationAttempts.current += 1;
+    console.log(`🧭 Navigation attempt ${navigationAttempts.current}/${maxNavigationAttempts} to ${destination}`);
+    
+    try {
+      console.log(`🔄 Navigating to ${destination}`);
+      navigate(destination, { replace });
+      console.log('✅ Navigation completed successfully');
+      return true;
+    } catch (navError) {
+      console.error('❌ Navigation error:', navError);
+      logError(navError, {
+        component: 'TraeAwakensPage',
+        action: 'navigate',
+        additionalData: { destination, attempt: navigationAttempts.current }
+      });
+      
+      return false;
+    }
+  };
+
   const handleContinueToPortal = () => {
     // Prevent multiple navigation attempts
     if (isNavigatingRef.current) {
@@ -273,46 +296,40 @@ const TraeAwakensPage: React.FC = () => {
       // Navigate to home or premium page after a delay
       const redirectTimeout = setTimeout(() => {
         if (isMountedRef.current) {
-          navigationAttempts.current += 1;
-          console.log(`🧭 Navigation attempt ${navigationAttempts.current}`);
+          // Determine destination
+          const destination = localStorage.getItem('neuropul_show_cta') === 'true' && 
+                             localStorage.getItem('neuropul_is_paid') !== 'true' 
+                             ? '/premium' 
+                             : '/';
           
-          try {
-            // Check if we should show CTA
-            if (localStorage.getItem('neuropul_show_cta') === 'true' && 
-                localStorage.getItem('neuropul_is_paid') !== 'true') {
-              console.log('🔄 Navigating to premium page');
-              navigate('/premium', { replace: true });
-            } else {
-              console.log('🔄 Navigating to home page');
-              navigate('/', { replace: true });
-            }
-            
-            console.log('✅ Navigation completed successfully');
-            
-            // Reset navigation lock
-            isNavigatingRef.current = false;
-          } catch (navError) {
-            console.error('❌ Navigation error:', navError);
-            logError(navError, {
-              component: 'TraeAwakensPage',
-              action: 'navigate'
-            });
-            
-            // If navigation fails and we haven't tried too many times, try again
-            if (navigationAttempts.current < 3) {
-              console.log(`🔄 Retrying navigation (attempt ${navigationAttempts.current + 1}/3)`);
-              const retryTimeout = setTimeout(() => handleContinueToPortal(), 1000);
-              timeoutRefs.current.push(retryTimeout);
-            } else {
-              console.error('❌ Max navigation attempts reached, giving up');
-              isNavigatingRef.current = false;
-              
-              // Force reload as last resort
+          // Attempt navigation
+          const success = attemptNavigation(destination);
+          
+          // If navigation fails and we haven't tried too many times, try again
+          if (!success && navigationAttempts.current < maxNavigationAttempts) {
+            console.log(`🔄 Scheduling retry navigation (attempt ${navigationAttempts.current + 1}/${maxNavigationAttempts})`);
+            const retryTimeout = setTimeout(() => {
               if (isMountedRef.current) {
-                console.log('🔄 Forcing page reload as fallback');
-                window.location.href = '/';
+                const retrySuccess = attemptNavigation(destination);
+                
+                // If still failing after retries, use location.href as fallback
+                if (!retrySuccess && navigationAttempts.current >= maxNavigationAttempts) {
+                  console.log('🔄 Max navigation attempts reached, using location.href fallback');
+                  window.location.href = destination;
+                }
               }
-            }
+            }, 1500);
+            
+            timeoutRefs.current.push(retryTimeout);
+          } else if (!success) {
+            // If we've tried enough times, use location.href as fallback
+            console.log('🔄 Max navigation attempts reached, using location.href fallback');
+            window.location.href = destination;
+          }
+          
+          // Reset navigation lock if successful
+          if (success) {
+            isNavigatingRef.current = false;
           }
         }
       }, 1000);
@@ -401,6 +418,30 @@ const TraeAwakensPage: React.FC = () => {
     }
   }, [currentScreen]);
 
+  // Force navigation if we're stuck on the portal screen
+  useEffect(() => {
+    if (currentScreen === 'portal') {
+      const forceNavigationTimeout = setTimeout(() => {
+        if (currentScreen === 'portal' && isMountedRef.current) {
+          console.log('⚠️ Force navigation triggered - still on portal screen');
+          window.location.href = '/';
+        }
+      }, 5000); // 5 seconds on portal screen before forcing navigation
+      
+      timeoutRefs.current.push(forceNavigationTimeout);
+      
+      return () => {
+        clearTimeout(forceNavigationTimeout);
+      };
+    }
+  }, [currentScreen]);
+
+  // Direct navigation function for emergency button
+  const handleDirectNavigation = () => {
+    console.log('🚨 Emergency navigation button clicked');
+    window.location.href = '/';
+  };
+
   return (
     <div className="relative min-h-screen overflow-hidden">
       <AnimatePresence mode="wait">
@@ -469,11 +510,15 @@ const TraeAwakensPage: React.FC = () => {
             
             {/* Emergency escape button */}
             <button 
-              onClick={() => window.location.href = '/'}
+              onClick={handleDirectNavigation}
               className="mt-8 bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg transition-colors"
             >
               Перейти на главную вручную
             </button>
+            
+            <div className="mt-4 text-gray-500 text-xs">
+              Если переход не происходит автоматически, нажмите кнопку выше
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

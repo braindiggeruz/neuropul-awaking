@@ -126,5 +126,39 @@
         <p>NeuropulAI requires JavaScript to function. Please enable JavaScript in your browser settings and reload the page.</p>
       </div>
     </noscript>
+    
+    <script>
+      // Remove the initial loader once the app has loaded
+      window.addEventListener('load', function() {
+        const loader = document.getElementById('initial-loader');
+        if (loader) {
+          console.log('Removing initial loader from load event');
+          loader.style.opacity = '0';
+          loader.style.transition = 'opacity 0.5s ease';
+          setTimeout(function() {
+            if (loader && loader.parentNode) {
+              loader.remove();
+              console.log('Initial loader removed from load event');
+            }
+          }, 500);
+        }
+      });
+      
+      // Fallback removal after 5 seconds
+      setTimeout(function() {
+        const loader = document.getElementById('initial-loader');
+        if (loader) {
+          console.log('Removing initial loader from fallback timeout');
+          loader.style.opacity = '0';
+          loader.style.transition = 'opacity 0.5s ease';
+          setTimeout(function() {
+            if (loader && loader.parentNode) {
+              loader.remove();
+              console.log('Initial loader removed from fallback timeout');
+            }
+          }, 500);
+        }
+      }, 5000);
+    </script>
   </body>
 </html>
